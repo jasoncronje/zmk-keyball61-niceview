@@ -116,6 +116,20 @@ nice_view_spi: &spi0 {
              INPUT_REL_HWHEEL INPUT_REL_WHEEL>;
     };
 
+    // Sensor runs at 800 CPI (CONFIG_PMW3610_CPI); scaled down per output.
+    // BLE 3/5 = 480 effective. USB 9/10 = 720: USB sends each sensor reading
+    // on its own, BLE merges 3 or 4 per 15 ms report, and macOS accelerates
+    // those bigger steps more, so USB needs ~1.5x the counts to feel the same.
+    // Tried: BLE 400 (a bit slow).
+    zip_transport_scaler: zip_transport_scaler {
+      compatible = "zmk,input-processor-transport-scaler";
+      #input-processor-cells = <0>;
+      track-remainders;
+      codes = <INPUT_REL_X INPUT_REL_Y>;
+      usb-scale = <9 10>;
+      ble-scale = <3 5>;
+    };
+
     zip_temp_layer: zip_temp_layer {
       compatible = "zmk,input-processor-temp-layer";
       #input-processor-cells = <2>;
@@ -128,7 +142,7 @@ nice_view_spi: &spi0 {
   trackball_listener {
     compatible = "zmk,input-listener";
     device = <&trackball>;
-    input-processors = <&zip_temp_layer 3 700>;
+    input-processors = <&zip_transport_scaler>, <&zip_temp_layer 3 700>;
 
     hscroll_layer_config {
       layers = <5>;

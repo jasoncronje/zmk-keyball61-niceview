@@ -1,0 +1,28 @@
+description: |
+  Scales pointer movement by a different fraction on USB and on BLE, so the
+  pointer can feel the same on both. BLE reports carry several sensor readings
+  merged into one, and macOS accelerates those bigger steps more.
+
+compatible: "zmk,input-processor-transport-scaler"
+
+include: ip_common.yaml
+
+properties:
+  "#input-processor-cells":
+    type: int
+    required: true
+    const: 0
+  type:
+    type: int
+    default: 0x02 # INPUT_EV_REL
+  codes:
+    type: array
+    required: true
+  usb-scale:
+    type: array
+    required: true
+    description: <multiplier divisor> used while USB is the selected output
+  ble-scale:
+    type: array
+    required: true
+    description: <multiplier divisor> used while BLE is the selected output

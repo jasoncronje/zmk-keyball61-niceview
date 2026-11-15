@@ -1,0 +1,1 @@
+target_sources_ifdef(CONFIG_DT_HAS_ZMK_INPUT_PROCESSOR_TRANSPORT_SCALER_ENABLED app PRIVATE src/input_processor_transport_scaler.c)
