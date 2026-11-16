@@ -1,26 +1,24 @@
 # Agent guide
 
-ZMK config for the Keyball61: split, two nice!nano v2, trackball on the right half. `README.md` covers features and hardware. This file holds only what the code doesn't tell you.
+ZMK config for the Keyball61 with nice!view screens: split, two nice!nano v2, trackball on the right half. The OLED setup lives in a separate repo, `jasoncronje/zmk-keyball61-oled`; changes made here do nothing on that keyboard. `README.md` covers features and hardware. This file holds only what the code doesn't tell you.
 
 ## Which build to flash
 
-`build.yaml` builds three shields. Find out which one the user's keyboard runs before picking artifacts; never guess.
+`build.yaml` builds two shields. Find out which one the user's keyboard runs before picking artifacts; never guess.
 
 | Shield | Hardware | Left artifact | Right artifact |
 |---|---|---|---|
-| `keyball61` | Bought PCB, OLEDs | `keyball61_left nice_oled-nice_nano_v2-zmk.uf2` | `keyball61_right nice_oled-nice_nano_v2-zmk.uf2` |
 | `keyball61_nv` | Bought PCB, nice!views | `keyball61_nv_left nice_view-nice_nano_v2-zmk.uf2` | `keyball61_nv_right nice_view-nice_nano_v2-zmk.uf2` |
 | `keyball61_ble` | Open-source PCB, nice!views | `keyball61_ble_left nice_view-nice_nano_v2-zmk.uf2` | `keyball61_ble_right nice_view-nice_nano_v2-zmk.uf2` |
 
-If the user runs the key logger (`tools/keylog`), the right half needs the `-keylog` artifact instead (`keyball61_right-keylog-…` or `keyball61_nv_right-keylog-…`), or logging stops.
+If the user runs the key logger (`tools/keylog`), the right half needs the `-keylog` artifact instead (`keyball61_nv_right-keylog-…`), or logging stops.
 
 ## What is shared between shields
 
-- Keymap: one file, `config/keyball61.keymap`. The `_nv` and `_ble` keymaps only include it.
-- `.conf` files are per shield and not shared. Edit the files of the shield the keyboard runs (`config/<shield>.conf`, `config/boards/shields/<shield>/*.conf`); a change in another shield's file does nothing on that keyboard. Mirror a change to the other shields when it applies to them.
-- Trackball, auto-mouse and scroll setup is in two right overlays that must stay in step: `keyball61/keyball61_right.overlay` and `keyball61_ble/keyball61_ble_right.overlay` (`_nv` includes the `_ble` one).
-- Those overlays use layers by number (MOUSE 3, SCROLL 4, HSCROLL 5). Update them if the keymap's layer order changes.
-- A key's MOUSE-layer binding only runs if its position is in `excluded-positions` in both overlays. Otherwise auto-mouse sees the press first, drops the layer, and the key resolves on DEFAULT.
+- Keymap: one file, `config/keyball61.keymap`. The `_nv` and `_ble` keymaps only include it; there is no `keyball61` shield here.
+- `.conf` files are per shield and not shared. Edit the files of the shield the keyboard runs (`config/<shield>.conf`, `config/boards/shields/<shield>/*.conf`); a change in another shield's file does nothing on that keyboard. Mirror a change to the other shield when it applies to it. If it also suits the OLED keyboard, say so; it has to be made again in `jasoncronje/zmk-keyball61-oled`.
+- Trackball, auto-mouse and scroll setup is in `keyball61_ble/keyball61_ble_right.overlay`; `_nv` includes it. It uses layers by number (MOUSE 3, SCROLL 4, HSCROLL 5). Update it if the keymap's layer order changes.
+- A key's MOUSE-layer binding only runs if its position is in `excluded-positions` in that overlay. Otherwise auto-mouse sees the press first, drops the layer, and the key resolves on DEFAULT.
 
 ## Build, push, flash
 

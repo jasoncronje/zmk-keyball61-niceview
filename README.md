@@ -1,6 +1,6 @@
 # Keyball61 ZMK Config
 
-A heavily customized ZMK firmware for the wireless [Keyball61](https://github.com/Yowkees/keyball), a 61-key split ortho with an integrated 34mm trackball, running over BLE and tuned for macOS. This repo is specifically for **BLE / ZMK** builds. If you're running the wired QMK variant, take a look at: [Yowkees/keyball](https://github.com/Yowkees/keyball).
+A heavily customized ZMK firmware for the wireless [Keyball61](https://github.com/Yowkees/keyball), a 61-key split ortho with an integrated 34mm trackball, running over BLE and tuned for macOS. This repo is for **nice!view** screens on **BLE / ZMK**. The version for the original OLED screens is [jasoncronje/zmk-keyball61-oled](https://github.com/jasoncronje/zmk-keyball61-oled). If you're running the wired QMK variant, take a look at: [Yowkees/keyball](https://github.com/Yowkees/keyball).
 
 > **Note:** This is my personal config, you can use as is or fork to tweak things to your liking.
 
@@ -22,7 +22,7 @@ I came to the Keyball61 from a [UHK 60](https://uhk.io/uhk60). The UHK 60 sold m
 - **ZMK v0.3.0**: upgraded from v0.2 for module support and input processors.
 - **PMW3610 trackball driver**: [kumamuk-git/zmk-pmw3610-driver](https://github.com/kumamuk-git/zmk-pmw3610-driver) with SPI. This allowed me to switch the trackball to vertical/side scroll on certain layers.
 - **Native auto-mouse**: `zip_temp_layer` input processor instead of driver-level automouse. Excludes click positions, respects typing idle.
-- **Status screens**: our own module (`modules/status-screen`) draws labelled blocks for battery, output, layer, mods and Touch ID, with layouts for the 128×32 OLEDs and the nice!view.
+- **Status screens**: our own module (`modules/status-screen`) draws labelled blocks for battery, output, layer, mods and Touch ID, with a layout for the nice!view.
 - **BLE tuned**: optimized for Mac OS bluetooth connectivity and fixing latency issues. 
 
 ## Hardware Mods
@@ -40,7 +40,7 @@ The `keyball61_nv` shield runs the bought Keyball61 PCB with nice!views in place
 | Left | pm1 (P0.06): the pad marked D3/TX0 | the Touch ID enable moves to pm9 (P1.06), the pad marked B5, last on that edge |
 | Right | pm1 (P0.06): the pad marked D3/TX0 | the only free controller pin on this half |
 
-Build artifacts are `keyball61_nv_left nice_view` and `keyball61_nv_right nice_view`. They use the same status screen module as the OLEDs (`modules/status-screen`), with a layout drawn for the nice!view's 68×160 portrait screen. To preview the layouts without hardware, run `python3 modules/status-screen/scripts/preview.py <out-dir>`; it builds the firmware's drawing code on your Mac and writes PNGs.
+Build artifacts are `keyball61_nv_left nice_view` and `keyball61_nv_right nice_view`. They use the status screen module (`modules/status-screen`), with a layout drawn for the nice!view's 68×160 portrait screen. To preview the layouts without hardware, run `python3 modules/status-screen/scripts/preview.py <out-dir>`; it builds the firmware's drawing code on your Mac and writes PNGs.
 
 ## Mouseless thumb key
 
