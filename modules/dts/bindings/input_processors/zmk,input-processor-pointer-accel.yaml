@@ -1,0 +1,35 @@
+description: |
+  Speed-dependent pointer gain. Slow steps get low-factor, fast steps
+  high-factor, with a smooth ramp between speed-low and speed-high. Speed is
+  measured on the raw sensor counts, before any gain. Meant to run with the
+  host's own acceleration turned off.
+
+compatible: "zmk,input-processor-pointer-accel"
+
+include: ip_common.yaml
+
+properties:
+  "#input-processor-cells":
+    type: int
+    required: true
+    const: 0
+  low-factor:
+    type: int
+    required: true
+    description: gain at and below speed-low, in thousandths (1000 = 1.0x)
+  high-factor:
+    type: int
+    required: true
+    description: gain at and above speed-high, in thousandths
+  speed-low:
+    type: int
+    required: true
+    description: sensor counts per second where the ramp starts
+  speed-high:
+    type: int
+    required: true
+    description: sensor counts per second where the ramp ends
+  smoothing:
+    type: int
+    default: 400
+    description: weight of the newest step in the speed average, out of 1000 (1000 = none)

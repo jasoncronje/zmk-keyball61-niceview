@@ -23,6 +23,7 @@ I came to the Keyball61 from a [UHK 60](https://uhk.io/uhk60). The UHK 60 sold m
 
 - **ZMK v0.3.0**: upgraded from v0.2 for module support and input processors.
 - **PMW3610 trackball driver**: [kumamuk-git/zmk-pmw3610-driver](https://github.com/kumamuk-git/zmk-pmw3610-driver) with SPI. This allowed me to switch the trackball to vertical/side scroll on certain layers.
+- **Pointer acceleration in the firmware**: our own input processor (`modules/pointer-accel`) speeds the pointer up with ball speed, so it feels the same over USB and Bluetooth and on any computer. Turn the host's own acceleration off; on macOS: System Settings > Mouse > Advanced > Pointer acceleration.
 - **Native auto-mouse**: `zip_temp_layer` input processor instead of driver-level automouse. Excludes click positions, respects typing idle.
 - **Status screens**: our own module (`modules/status-screen`) draws labelled blocks for battery, output, layer, mods and Touch ID, with a layout for the nice!view.
 - **BLE tuned**: optimized for Mac OS bluetooth connectivity and fixing latency issues. 

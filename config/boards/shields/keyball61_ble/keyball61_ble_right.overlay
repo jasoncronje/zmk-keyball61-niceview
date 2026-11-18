@@ -116,22 +116,27 @@ nice_view_spi: &spi0 {
              INPUT_REL_HWHEEL INPUT_REL_WHEEL>;
     };
 
-    // Sensor runs at 800 CPI (CONFIG_PMW3610_CPI); scaled down per output.
-    // BLE 7/8 = 700 effective. USB 9/10 = 720: USB sends each sensor reading
-    // on its own, BLE merges ~2 per 7.5 ms report, and macOS accelerates
-    // those bigger steps more, so USB needs ~1.5x the counts to feel the same.
-    // Tried: BLE 400 (a bit slow), BLE 480 (still slightly slower than USB 720).
-    // 3/4 = 600 since BLE moved to 7.5 ms (mouse appearance): each report now
-    // holds ~2 readings instead of ~3.75, so macOS accelerates less. A first
-    // guess between USB 720 and the old 500; felt a little dull on 7.5 ms
-    // (confirmed in bluetoothd, 2026-11-17), so 7/8 = 700.
-    zip_transport_scaler: zip_transport_scaler {
-      compatible = "zmk,input-processor-transport-scaler";
+    // Pointer acceleration in the firmware (modules/pointer-accel), with
+    // macOS acceleration turned off (System Settings > Mouse > Advanced >
+    // Pointer acceleration), so USB and BLE feel the same with one setting.
+    // Until 2026-11-17 macOS accelerated and a transport scaler set the speed
+    // per output, because macOS boosts each report by its size and BLE packs
+    // several sensor readings into one: BLE 400, 480, 500 at 15 ms, 600 and
+    // 700 at 7.5 ms (700 felt right), USB 720. The scaler module is kept.
+    //
+    // Sensor at 800 CPI (31.5 counts per mm of ball surface). Gain is
+    // low-factor up to speed-low, high-factor from speed-high, a smooth ramp
+    // between. Set overall speed with macOS's Tracking speed slider first,
+    // then the fast gain here. First guess, tune by feel:
+    //   low 0.8x below 500 counts/s (16 mm/s), high 2.5x above 5000 (160 mm/s).
+    zip_pointer_accel: zip_pointer_accel {
+      compatible = "zmk,input-processor-pointer-accel";
       #input-processor-cells = <0>;
-      track-remainders;
-      codes = <INPUT_REL_X INPUT_REL_Y>;
-      usb-scale = <9 10>;
-      ble-scale = <7 8>;
+      low-factor = <800>;
+      high-factor = <2500>;
+      speed-low = <500>;
+      speed-high = <5000>;
+      smoothing = <400>;
     };
 
     zip_temp_layer: zip_temp_layer {
@@ -146,7 +151,7 @@ nice_view_spi: &spi0 {
   trackball_listener {
     compatible = "zmk,input-listener";
     device = <&trackball>;
-    input-processors = <&zip_transport_scaler>, <&zip_temp_layer 3 700>;
+    input-processors = <&zip_pointer_accel>, <&zip_temp_layer 3 700>;
 
     hscroll_layer_config {
       layers = <5>;

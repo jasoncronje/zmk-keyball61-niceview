@@ -1,0 +1,1 @@
+target_sources_ifdef(CONFIG_DT_HAS_ZMK_INPUT_PROCESSOR_POINTER_ACCEL_ENABLED app PRIVATE src/input_processor_pointer_accel.c)
