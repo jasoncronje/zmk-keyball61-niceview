@@ -117,20 +117,21 @@ nice_view_spi: &spi0 {
     };
 
     // Sensor runs at 800 CPI (CONFIG_PMW3610_CPI); scaled down per output.
-    // BLE 3/4 = 600 effective. USB 9/10 = 720: USB sends each sensor reading
+    // BLE 7/8 = 700 effective. USB 9/10 = 720: USB sends each sensor reading
     // on its own, BLE merges ~2 per 7.5 ms report, and macOS accelerates
     // those bigger steps more, so USB needs ~1.5x the counts to feel the same.
     // Tried: BLE 400 (a bit slow), BLE 480 (still slightly slower than USB 720).
     // 3/4 = 600 since BLE moved to 7.5 ms (mouse appearance): each report now
     // holds ~2 readings instead of ~3.75, so macOS accelerates less. A first
-    // guess between USB 720 and the old 500; tune by feel.
+    // guess between USB 720 and the old 500; felt a little dull on 7.5 ms
+    // (confirmed in bluetoothd, 2026-11-17), so 7/8 = 700.
     zip_transport_scaler: zip_transport_scaler {
       compatible = "zmk,input-processor-transport-scaler";
       #input-processor-cells = <0>;
       track-remainders;
       codes = <INPUT_REL_X INPUT_REL_Y>;
       usb-scale = <9 10>;
-      ble-scale = <3 4>;
+      ble-scale = <7 8>;
     };
 
     zip_temp_layer: zip_temp_layer {
