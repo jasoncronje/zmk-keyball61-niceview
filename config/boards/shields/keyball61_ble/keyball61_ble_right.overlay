@@ -128,14 +128,15 @@ nice_view_spi: &spi0 {
     // low-factor up to speed-low, high-factor from speed-high, a smooth ramp
     // between. Set overall speed with macOS's Tracking speed slider first,
     // then the fast gain here.
-    //   low 0.7x below 500 counts/s (16 mm/s), high 3.5x above 5000 (160 mm/s).
+    //   low 0.7x below 500 counts/s (16 mm/s), high 3.0x above 5000 (160 mm/s).
     // Tried: low 0.8x (short moves ever so slightly fast), high 2.5x (flicks
-    // too weak), with macOS acceleration off.
+    // too weak), high 3.5x (long flicks too aggressive), with macOS
+    // acceleration off.
     zip_pointer_accel: zip_pointer_accel {
       compatible = "zmk,input-processor-pointer-accel";
       #input-processor-cells = <0>;
       low-factor = <700>;
-      high-factor = <3500>;
+      high-factor = <3000>;
       speed-low = <500>;
       speed-high = <5000>;
       smoothing = <400>;
