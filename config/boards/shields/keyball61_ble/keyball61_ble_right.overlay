@@ -124,7 +124,8 @@ nice_view_spi: &spi0 {
     // several sensor readings into one: BLE 400, 480, 500 at 15 ms, 600 and
     // 700 at 7.5 ms (700 felt right), USB 720. The scaler module is kept.
     //
-    // Sensor at 800 CPI (31.5 counts per mm of ball surface). Gain is
+    // Sensor at ~31.5 counts per mm of ball surface (800 CPI nominal; 700 on
+    // keyball61_nv with the roBa cup, which reads 14% high). Gain is
     // low-factor up to speed-low, high-factor from speed-high, a smooth ramp
     // between. Set overall speed with macOS's Tracking speed slider first,
     // then the fast gain here.
