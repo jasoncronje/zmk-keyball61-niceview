@@ -250,3 +250,7 @@ pad_screw_hole = 4.5  # over the 4.28 counterbores: the screws stay reachable
 pad_hole_clearance = 0.25  # per side round the other openings (the trackball hole)
 pad_plug_clearance = 0.2  # per side: the plugs slot into the feet's recesses and locate the pad
 pad_plug_height = foot_depth - 0.1  # stops short of the recess floor so the pad lies flat
+pad_groove = 0.8  # hex grid of grooves in the desk side, this wide...
+pad_groove_depth = 0.2  # ...one layer deep (the first layer: it prints desk side down)
+pad_groove_pitch = 10.0  # across the flats, centre to centre: (9.2 / 10)^2, about 85 % stays solid
+pad_groove_rim = 1.5  # solid band round the edge, so no groove runs out and lifts

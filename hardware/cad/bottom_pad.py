@@ -7,11 +7,16 @@ bottom edge, pad_thick thick. It is open over the screw
 counterbores (pad_screw_hole, so the case still comes apart) and the trackball hole.
 Plugs stand up from it into the feet's recesses and locate it while the glue sets.
 
+`_grooved` versions add a hex grid of one-layer grooves to the desk side, which bite
+a little on matte wood and give dust somewhere to go, at the cost of some contact area.
+
 It prints plugs up, the desk side on the bed: a textured plate gives the grip side its
 texture. In the STEP it sits under the case, as it is glued on.
 """
 
-from build123d import Circle, Cylinder, Kind, Pos, Sketch, extrude, offset
+import math
+
+from build123d import Circle, Cylinder, Kind, Pos, Rectangle, RegularPolygon, Sketch, extrude, offset
 
 import layout_left as left
 import layout_right as right
@@ -21,6 +26,10 @@ from params import (
     case_bottom_round,
     foot_dia,
     pad_edge_inset,
+    pad_groove,
+    pad_groove_depth,
+    pad_groove_pitch,
+    pad_groove_rim,
     pad_hole_clearance,
     pad_plug_clearance,
     pad_plug_height,
@@ -31,7 +40,7 @@ from params import (
 from switch_plate import export
 
 
-def pad(layout):
+def pad(layout, grooved: bool = False):
     _, outer, tray = outlines(layout)
     floor = outer + tray
     if layout.POD_CENTER:
@@ -49,14 +58,33 @@ def pad(layout):
     body = Pos(0, 0, -pad_thick) * extrude(plan, pad_thick)
     r = foot_dia / 2 - pad_plug_clearance
     body += [Pos(x, y, pad_plug_height / 2) * Cylinder(r, pad_plug_height) for x, y in layout.FEET]
+    if grooved:
+        body -= Pos(0, 0, -pad_thick) * extrude(grooves(plan), pad_groove_depth)
     assert len(body.solids()) == 1, f"pad split into {len(body.solids())} solids"
     return body
+
+
+def grooves(plan: Sketch) -> Sketch:
+    """A hex grid of pad_groove-wide grooves over the pad, inside a solid rim: a sheet
+    the pad's size, less a hexagon per cell pad_groove narrower than the pitch."""
+    bb = plan.bounding_box()
+    dx, dy = pad_groove_pitch, pad_groove_pitch * math.sqrt(3) / 2  # rows of flat-sided cells
+    r = (pad_groove_pitch - pad_groove) / math.sqrt(3)  # circumradius of a cell's solid hexagon
+    cells = []
+    for j in range(int((bb.max.Y - bb.min.Y) / dy) + 3):
+        y = bb.min.Y - dy + j * dy
+        shift = dx / 2 if j % 2 else 0.0
+        for i in range(int((bb.max.X - bb.min.X) / dx) + 3):
+            cells.append(Pos(bb.min.X - dx + shift + i * dx, y) * RegularPolygon(r, 6, major_radius=True, rotation=30))
+    sheet = Pos(bb.center().X, bb.center().Y) * Rectangle(bb.size.X + 2 * dx, bb.size.Y + 2 * dx)
+    return (sheet - cells) & offset(plan, -pad_groove_rim, kind=Kind.ARC)
 
 
 PADS = {"left_bottom_pad": left, "right_bottom_pad": right}
 
 if __name__ == "__main__":
     for name, layout in PADS.items():
-        part = pad(layout)
-        print(f"{name}: volume {part.volume:.1f} mm^3, bbox {part.bounding_box().size}")
-        export(part, name, flip=False, pose=Pos(0, 0, pad_thick))
+        for suffix, grooved in (("", False), ("_grooved", True)):
+            part = pad(layout, grooved)
+            print(f"{name}{suffix}: volume {part.volume:.1f} mm^3, bbox {part.bounding_box().size}")
+            export(part, name + suffix, flip=False, pose=Pos(0, 0, pad_thick))

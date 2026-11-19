@@ -17,8 +17,8 @@ Download the 3MF files and open them in your slicer. The parts are modelled in c
 | Left lid | 1 | [left_lid.3mf](../hardware/3d-prints/lids/left_lid.3mf) (fit test: [left_lid_test_ring.3mf](../hardware/3d-prints/lids/left_lid_test_ring.3mf)) |
 | Right lid | 1 | [right_lid.3mf](../hardware/3d-prints/lids/right_lid.3mf) (fit test: [right_lid_test_ring.3mf](../hardware/3d-prints/lids/right_lid_test_ring.3mf)) |
 | Palm rest (TPU) | 2 | [palm_rest_tpu.3mf](../hardware/3d-prints/palm-rests/palm_rest_tpu.3mf) |
-| Left grip pad (TPU, optional) | 1 | [left_bottom_pad.3mf](../hardware/3d-prints/bottom-pads/left_bottom_pad.3mf) |
-| Right grip pad (TPU, optional) | 1 | [right_bottom_pad.3mf](../hardware/3d-prints/bottom-pads/right_bottom_pad.3mf) |
+| Left grip pad (TPU, optional) | 1 | [left_bottom_pad.3mf](../hardware/3d-prints/bottom-pads/left_bottom_pad.3mf) or [grooved](../hardware/3d-prints/bottom-pads/left_bottom_pad_grooved.3mf) |
+| Right grip pad (TPU, optional) | 1 | [right_bottom_pad.3mf](../hardware/3d-prints/bottom-pads/right_bottom_pad.3mf) or [grooved](../hardware/3d-prints/bottom-pads/right_bottom_pad_grooved.3mf) |
 | Touch ID cap | 1 | [left_touchid_cap.3mf](../hardware/3d-prints/touch-id/left_touchid_cap.3mf) |
 | Touch ID back plate | 1 | [left_touchid_back_plate.3mf](../hardware/3d-prints/touch-id/left_touchid_back_plate.3mf) |
 | Trackball cup and sensor cover | 1 | Coming soon |
@@ -71,6 +71,7 @@ For DIY wooden rests, use two blocks with an overall size of **100 × 79 × 20 m
 An optional TPU pad covers each case bottom in place of the stick-on feet. It is 0.8 mm thick, with 4.5 mm holes over the screw counterbores so the case still comes apart, and an opening over the trackball hole. Four 0.9 mm plugs on top slot into the feet's recesses and line it up. Remove the stick-on feet first.
 
 - **Filament:** the softest TPU the printer feeds reliably grips best. On a Bambu P2S that is about 82A (Recreus Filaflex 82A) from the external spool, not the AMS; Bambu advises against 75A and softer. 95A works but grips less.
+- **Grooved or plain:** the grooved pads add a hex grid of 0.8 mm grooves, one layer deep, to the desk side (about 85% stays solid). They bite a little more on matte wood and give dust somewhere to go; the plain pads keep the most contact area for smooth surfaces.
 - **Printing:** plugs up, on a textured plate, so the desk side gets the texture. About 23 g of TPU each.
 - **Gluing:** scuff both faces and use a rubber-toughened gel CA such as Loctite Ultra Gel Control. Keep glue about 2 mm back from the holes so none runs into the counterbores.
 
