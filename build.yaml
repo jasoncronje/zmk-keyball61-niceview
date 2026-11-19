@@ -1,34 +1,7 @@
-# This file generates the GitHub Actions matrix
-# For simple board + shield combinations, add them
-# to the top level board and shield arrays, for more
-# control, add individual board + shield combinations to
-# the `include` property, e.g:
-#
-# board: [ "nice_nano_v2" ]
-# shield: [ "corne_left", "corne_right" ]
-# include:
-#   - board: bdn9_rev2
-#   - board: nice_nano_v2
-#     shield: reviung41
-#
+# Debug branch only: right half (keyball61_nv) with USB logging of every PMW3610
+# motion burst (raw x/y, SQUAL, shutter). Read /dev/cu.usbmodem* at 115200.
 ---
 include:
-  # Open-source Keyball61 BLE PCB (keyball61-ble) with a nice!view
-  - board: nice_nano_v2
-    shield: keyball61_ble_left nice_view
-  - board: nice_nano_v2
-    shield: keyball61_ble_right nice_view
-    snippet: studio-rpc-usb-uart
-  # Bought Keyball61 PCB with its OLEDs swapped for nice!views (CS hand-wired)
-  - board: nice_nano_v2
-    shield: keyball61_nv_left nice_view
   - board: nice_nano_v2
     shield: keyball61_nv_right nice_view
-    snippet: studio-rpc-usb-uart
-  # Key logger builds of the right (central) half: Raw HID + modules/keylog for tools/keylog
-  - board: nice_nano_v2
-    shield: keyball61_nv_right nice_view raw_hid_adapter
-    snippet: studio-rpc-usb-uart
-    artifact-name: keyball61_nv_right-keylog-nice_nano_v2-zmk
-  - board: nice_nano_v2
-    shield: settings_reset
+    snippet: zmk-usb-logging
