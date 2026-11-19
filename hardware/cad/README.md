@@ -34,7 +34,7 @@ cutting template for the foam under the Touch ID board.
 | `touchid.py` | Left case Touch ID pod, cap, back plate and logic-board pocket |
 | `palm_rest.py` | TPU Voronoi-lattice palm rest |
 | `bottom_pad.py` | TPU grip pads that glue under the cases and plug into the feet's recesses |
-| `profiles/` | Bambu Studio presets for Overture TPU 95A on a P2S (0.4 and 0.6 nozzle) |
+| `profiles/` | Bambu Studio / OrcaSlicer presets for Overture TPU 95A on a P2S (0.4 and 0.6 nozzle), including `0.20mm TPU Grip Pad` for the grip pads |
 
 Insert positions (`INSERTS` in the layout files) match the bought keyboard's PCB: 9 on the
 left, 8 on the right.

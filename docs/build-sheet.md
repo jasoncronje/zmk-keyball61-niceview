@@ -72,6 +72,7 @@ An optional TPU pad covers each case bottom in place of the stick-on feet. It is
 
 - **Filament:** the softest TPU the printer feeds reliably grips best. On a Bambu P2S that is about 82A (Recreus Filaflex 82A) from the external spool, not the AMS; Bambu advises against 75A and softer. 95A works but grips less.
 - **Grooved or plain:** the grooved pads add a hex grid of 0.8 mm grooves, one layer deep, to the desk side, joined to a groove round the edge and a ring round every hole (about 83% stays solid). They bite a little more on matte wood and give dust somewhere to go; the plain pads keep the most contact area for smooth surfaces.
+- **Print settings:** `right_bottom_pad_grooved.3mf` is an OrcaSlicer project with them built in (P2S 0.4 nozzle, Overture TPU 95A, textured PEI plate, the `0.20mm TPU Grip Pad` process from the [presets](../hardware/cad/profiles)). The key ones for the other files: 0.2 mm layers with a 0.2 mm first layer (the grooves are exactly one layer deep), elephant foot compensation 0, 5 top and bottom layers, no brim.
 - **Printing:** plugs up, on a textured plate, so the desk side gets the texture. About 23 g of TPU each.
 - **Gluing:** scuff both faces and use a rubber-toughened gel CA such as Loctite Ultra Gel Control. Keep glue about 2 mm back from the holes so none runs into the counterbores.
 
