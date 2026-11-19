@@ -254,3 +254,4 @@ pad_groove = 0.8  # hex grid of grooves in the desk side, this wide...
 pad_groove_depth = 0.2  # ...one layer deep (the first layer: it prints desk side down)
 pad_groove_pitch = 10.0  # across the flats, centre to centre: (9.2 / 10)^2 of the grid stays solid; about 83 % of the pad with the edge and hole grooves
 pad_groove_rim = 1.5  # solid band outside the edge groove and inside each hole ring
+pad_groove_sliver = 1.0  # solid thinner than this, where the grid meets a ring at a shallow angle, is grooved out

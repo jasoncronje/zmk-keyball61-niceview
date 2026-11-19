@@ -17,7 +17,9 @@ texture. In the STEP it sits under the case, as it is glued on.
 
 import math
 
-from build123d import Circle, Cylinder, Kind, Polygon, Pos, Rectangle, Sketch, extrude, offset
+import shapely
+import shapely.geometry as sg
+from build123d import Circle, Cylinder, Face, Kind, Pos, Sketch, Vector, Wire, extrude, offset
 
 import layout_left as left
 import layout_right as right
@@ -31,6 +33,7 @@ from params import (
     pad_groove_depth,
     pad_groove_pitch,
     pad_groove_rim,
+    pad_groove_sliver,
     pad_hole_clearance,
     pad_plug_clearance,
     pad_plug_height,
@@ -68,30 +71,49 @@ def pad(layout, grooved: bool = False):
 def grooves(outline: Sketch, holes: list) -> Sketch:
     """A hex grid of pad_groove-wide grooves over the pad, all one connected net: a
     groove runs round the edge pad_groove_rim in, and a ring groove round every hole
-    pad_groove_rim out from it, and the grid runs into both. Inside the rings and
-    outside the edge groove the pad stays solid."""
-    bb = outline.bounding_box()
+    pad_groove_rim out from it, and the grid runs into both. Each hole keeps its solid
+    band whole, even where its ring meets the edge groove. Solid slivers thinner than
+    pad_groove_sliver, where a grid line meets a ring at a shallow angle, are grooved
+    out. Drawn in shapely, whose offsets don't fail on this many pieces."""
+    edge = _shapely(outline.faces()[0].outer_wire())
+    bx0, by0, bx1, by1 = edge.bounds
     dx, dy = pad_groove_pitch, pad_groove_pitch * math.sqrt(3) / 2  # rows of flat-sided cells
     gap = (pad_groove_pitch - pad_groove) / math.sqrt(3)  # circumradius of a cell's solid hexagon
     cells = []
-    for j in range(int((bb.max.Y - bb.min.Y) / dy) + 3):
-        y = bb.min.Y - dy + j * dy
+    for j in range(int((by1 - by0) / dy) + 3):
+        y = by0 - dy + j * dy
         shift = dx / 2 if j % 2 else 0.0
-        for i in range(int((bb.max.X - bb.min.X) / dx) + 3):
-            cells.append(Polygon(*_hex_points(gap, bb.min.X - dx + shift + i * dx, y), align=None))
-    sheet = Pos(bb.center().X, bb.center().Y) * Rectangle(bb.size.X + 2 * dx, bb.size.Y + 2 * dx)
+        for i in range(int((bx1 - bx0) / dx) + 3):
+            cells.append(sg.Polygon(_hex_points(gap, bx0 - dx + shift + i * dx, y)))
+    grid = sg.box(bx0 - dx, by0 - dx, bx1 + dx, by1 + dx).difference(shapely.unary_union(cells))
 
-    edge_out = offset(outline, -pad_groove_rim, kind=Kind.ARC)
-    edge_in = offset(outline, -pad_groove_rim - pad_groove, kind=Kind.ARC)
-    rings_in, rings_out = [], []
+    edge_out = edge.buffer(-pad_groove_rim, quad_segs=32)
+    edge_in = edge.buffer(-pad_groove_rim - pad_groove, quad_segs=32)
+    bands, rings_out = [], []
     for h in holes:
         c, r = h.center(), h.bounding_box().size.X / 2 + pad_groove_rim
-        rings_in.append(Pos(c.X, c.Y) * Circle(r))
-        rings_out.append(Pos(c.X, c.Y) * Circle(r + pad_groove))
-    grid = ((sheet - cells) & edge_in) - rings_out
-    rings = (Sketch() + rings_out) - rings_in
-    net = (grid + (edge_out - edge_in) + rings) & edge_out
-    return Sketch() + [f for f in net.faces() if f.area > 2 * pad_groove**2]
+        bands.append(sg.Point(c.X, c.Y).buffer(r, quad_segs=32))  # the hole and its solid band
+        rings_out.append(sg.Point(c.X, c.Y).buffer(r + pad_groove, quad_segs=32))
+    bands, rings_out = shapely.unary_union(bands), shapely.unary_union(rings_out)
+
+    net = grid.intersection(edge_in).difference(rings_out)
+    net = shapely.unary_union([net, edge_out.difference(edge_in), rings_out]).intersection(edge_out).difference(bands)
+    # groove out the solid slivers: open the solid (shrink, then grow back) and take the rest
+    solid = edge_out.difference(net).difference(bands)
+    solid = solid.buffer(-pad_groove_sliver / 2, join_style="mitre").buffer(pad_groove_sliver / 2, join_style="mitre")
+    net = edge_out.difference(bands).difference(solid)
+    return Sketch() + [_face(g) for g in getattr(net, "geoms", [net]) if g.area > 2 * pad_groove**2]
+
+
+def _shapely(wire) -> "sg.Polygon":
+    return sg.Polygon([(p.X, p.Y) for p in wire.positions([i / 4000 for i in range(4000)])])
+
+
+def _face(poly) -> Face:
+    """A shapely polygon as a build123d face, facing up (outline anticlockwise)."""
+    poly = sg.polygon.orient(poly, 1.0)
+    ring = lambda r: Wire.make_polygon([Vector(x, y) for x, y in r.coords[:-1]], close=True)
+    return Face(ring(poly.exterior), [ring(r) for r in poly.interiors])
 
 
 def _hex_points(r: float, x: float, y: float) -> list:
