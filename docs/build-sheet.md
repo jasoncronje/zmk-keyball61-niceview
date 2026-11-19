@@ -71,7 +71,7 @@ For DIY wooden rests, use two blocks with an overall size of **100 × 79 × 20 m
 An optional TPU pad covers each case bottom in place of the stick-on feet. It is 0.8 mm thick, with 4.5 mm holes over the screw counterbores so the case still comes apart, and an opening over the trackball hole. Four 0.9 mm plugs on top slot into the feet's recesses and line it up. Remove the stick-on feet first.
 
 - **Filament:** the softest TPU the printer feeds reliably grips best. On a Bambu P2S that is about 82A (Recreus Filaflex 82A) from the external spool, not the AMS; Bambu advises against 75A and softer. 95A works but grips less.
-- **Grooved or plain:** the grooved pads add a hex grid of 0.8 mm grooves, one layer deep, to the desk side (about 85% stays solid). They bite a little more on matte wood and give dust somewhere to go; the plain pads keep the most contact area for smooth surfaces.
+- **Grooved or plain:** the grooved pads add a hex grid of 0.8 mm grooves, one layer deep, to the desk side, joined to a groove round the edge and a ring round every hole (about 83% stays solid). They bite a little more on matte wood and give dust somewhere to go; the plain pads keep the most contact area for smooth surfaces.
 - **Printing:** plugs up, on a textured plate, so the desk side gets the texture. About 23 g of TPU each.
 - **Gluing:** scuff both faces and use a rubber-toughened gel CA such as Loctite Ultra Gel Control. Keep glue about 2 mm back from the holes so none runs into the counterbores.
 

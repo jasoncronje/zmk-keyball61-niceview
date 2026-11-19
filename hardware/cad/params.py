@@ -252,5 +252,5 @@ pad_plug_clearance = 0.2  # per side: the plugs slot into the feet's recesses an
 pad_plug_height = foot_depth - 0.1  # stops short of the recess floor so the pad lies flat
 pad_groove = 0.8  # hex grid of grooves in the desk side, this wide...
 pad_groove_depth = 0.2  # ...one layer deep (the first layer: it prints desk side down)
-pad_groove_pitch = 10.0  # across the flats, centre to centre: (9.2 / 10)^2, about 85 % stays solid
-pad_groove_rim = 1.5  # solid band round the edge, so no groove runs out and lifts
+pad_groove_pitch = 10.0  # across the flats, centre to centre: (9.2 / 10)^2 of the grid stays solid; about 83 % of the pad with the edge and hole grooves
+pad_groove_rim = 1.5  # solid band outside the edge groove and inside each hole ring

@@ -7,7 +7,8 @@ bottom edge, pad_thick thick. It is open over the screw
 counterbores (pad_screw_hole, so the case still comes apart) and the trackball hole.
 Plugs stand up from it into the feet's recesses and locate it while the glue sets.
 
-`_grooved` versions add a hex grid of one-layer grooves to the desk side, which bite
+`_grooved` versions add a hex grid of one-layer grooves to the desk side, joined to a
+groove round the edge and a ring round every hole, which bite
 a little on matte wood and give dust somewhere to go, at the cost of some contact area.
 
 It prints plugs up, the desk side on the bed: a textured plate gives the grip side its
@@ -16,9 +17,7 @@ texture. In the STEP it sits under the case, as it is glued on.
 
 import math
 
-import shapely
-import shapely.geometry as sg
-from build123d import Circle, Cylinder, Face, Kind, Polygon, Pos, Rectangle, Sketch, Vector, Wire, extrude, offset
+from build123d import Circle, Cylinder, Kind, Polygon, Pos, Rectangle, Sketch, extrude, offset
 
 import layout_left as left
 import layout_right as right
@@ -67,45 +66,37 @@ def pad(layout, grooved: bool = False):
 
 
 def grooves(outline: Sketch, holes: list) -> Sketch:
-    """A hex grid of pad_groove-wide grooves over the pad: a sheet the pad's size, less a
-    hexagon per cell pad_groove narrower than the pitch. A solid band pad_groove_rim wide
-    runs round the edge and every hole: the cells it reaches into are left whole and
-    solid, so every groove is a complete cell edge, never a cut-off stub."""
+    """A hex grid of pad_groove-wide grooves over the pad, all one connected net: a
+    groove runs round the edge pad_groove_rim in, and a ring groove round every hole
+    pad_groove_rim out from it, and the grid runs into both. Inside the rings and
+    outside the edge groove the pad stays solid."""
     bb = outline.bounding_box()
     dx, dy = pad_groove_pitch, pad_groove_pitch * math.sqrt(3) / 2  # rows of flat-sided cells
     gap = (pad_groove_pitch - pad_groove) / math.sqrt(3)  # circumradius of a cell's solid hexagon
-    tile = pad_groove_pitch / math.sqrt(3)  # ...and of the whole cell, out to the groove centres
-    centres = []
+    cells = []
     for j in range(int((bb.max.Y - bb.min.Y) / dy) + 3):
         y = bb.min.Y - dy + j * dy
         shift = dx / 2 if j % 2 else 0.0
         for i in range(int((bb.max.X - bb.min.X) / dx) + 3):
-            centres.append((bb.min.X - dx + shift + i * dx, y))
+            cells.append(Polygon(*_hex_points(gap, bb.min.X - dx + shift + i * dx, y), align=None))
     sheet = Pos(bb.center().X, bb.center().Y) * Rectangle(bb.size.X + 2 * dx, bb.size.Y + 2 * dx)
-    net = (sheet - [Polygon(*_hex_points(gap, x, y), align=None) for x, y in centres]) & offset(outline, -pad_groove_rim, kind=Kind.ARC)
 
-    # the solid band: every cell not wholly inside the rim or reaching a hole's zone, out
-    # to the groove centres, merged and drawn back to the grooves' inner edges (shapely: OCC can't offset the merged hexagons inwards)
-    zones = [sg.Point(h.center().X, h.center().Y).buffer(h.bounding_box().size.X / 2 + pad_groove_rim) for h in holes]
-    wire = offset(outline, -pad_groove_rim, kind=Kind.ARC).faces()[0].outer_wire()
-    inside = sg.Polygon([(p.X, p.Y) for p in wire.positions([i / 2000 for i in range(2000)])])
-    tiles = [sg.Polygon(_hex_points(tile + 0.01, x, y)) for x, y in centres]  # overlapping a hair, so they merge without slivers
-    island = shapely.unary_union([t for t in tiles if not inside.contains(t) or any(t.intersects(z) for z in zones)]).buffer(
-        -pad_groove / 2 - 0.01, join_style="mitre")
-    for poly in getattr(island, "geoms", [island]):
-        net -= _face(poly)
+    edge_out = offset(outline, -pad_groove_rim, kind=Kind.ARC)
+    edge_in = offset(outline, -pad_groove_rim - pad_groove, kind=Kind.ARC)
+    rings_in, rings_out = [], []
+    for h in holes:
+        c, r = h.center(), h.bounding_box().size.X / 2 + pad_groove_rim
+        rings_in.append(Pos(c.X, c.Y) * Circle(r))
+        rings_out.append(Pos(c.X, c.Y) * Circle(r + pad_groove))
+    grid = ((sheet - cells) & edge_in) - rings_out
+    rings = (Sketch() + rings_out) - rings_in
+    net = (grid + (edge_out - edge_in) + rings) & edge_out
     return Sketch() + [f for f in net.faces() if f.area > 2 * pad_groove**2]
 
 
 def _hex_points(r: float, x: float, y: float) -> list:
     """A cell's hexagon, pointy end up (flat sides left and right), circumradius r."""
     return [(x + r * math.cos(math.radians(90 + 60 * k)), y + r * math.sin(math.radians(90 + 60 * k))) for k in range(6)]
-
-
-def _face(poly) -> Face:
-    """A shapely polygon as a build123d face."""
-    wire = lambda ring: Wire.make_polygon([Vector(x, y) for x, y in ring.coords[:-1]], close=True)
-    return Face(wire(poly.exterior), [wire(r) for r in poly.interiors])
 
 
 PADS = {"left_bottom_pad": left, "right_bottom_pad": right}
