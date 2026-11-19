@@ -14,6 +14,7 @@ uv run switch_plate.py
 uv run case.py
 uv run lid.py        # also writes *_lid_test_ring: print one first to check the fit
 uv run palm_rest.py  # TPU lattice palm rest; one part fits both halves
+uv run bottom_pad.py # TPU grip pads for the case bottoms, in place of the feet
 ```
 
 Each script writes `out/<part>.step` in design orientation (it imports into Fusion), plus
@@ -32,6 +33,7 @@ cutting template for the foam under the Touch ID board.
 | `lid.py` | Snap-on dust lids, drawn from the case outline with a 0.3 mm gap |
 | `touchid.py` | Left case Touch ID pod, cap, back plate and logic-board pocket |
 | `palm_rest.py` | TPU Voronoi-lattice palm rest |
+| `bottom_pad.py` | TPU grip pads that glue under the cases and plug into the feet's recesses |
 | `profiles/` | Bambu Studio presets for Overture TPU 95A on a P2S (0.4 and 0.6 nozzle) |
 
 Insert positions (`INSERTS` in the layout files) match the bought keyboard's PCB: 9 on the

@@ -242,3 +242,11 @@ board_screw_depth = 4.5  # from the post top: 4 mm screw less the 0.56 board, pl
 board_cable_bay = 11.2  # how far the pocket runs past the board's connector end: right up to
 # the inner wall (11.6 away, less the clearance), so the folded Lightning ribbon lies flat
 board_post_margin = 1.0  # floor the pocket leaves round a case standoff's foot
+
+# TPU grip pad glued under the case, in place of the stick-on feet
+pad_thick = 0.8  # 4 layers at 0.2; thinner warps and tears
+pad_edge_inset = 0.3  # in from the flat of the case bottom, clear of its round
+pad_screw_hole = 4.5  # over the 4.28 counterbores: the screws stay reachable
+pad_hole_clearance = 0.25  # per side round the other openings (the trackball hole)
+pad_plug_clearance = 0.2  # per side: the plugs slot into the feet's recesses and locate the pad
+pad_plug_height = foot_depth - 0.1  # stops short of the recess floor so the pad lies flat
