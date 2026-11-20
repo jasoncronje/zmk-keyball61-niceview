@@ -19,6 +19,7 @@ Download the 3MF files and open them in your slicer. The parts are modelled in c
 | Palm rest (TPU) | 2 | [palm_rest_tpu.3mf](../hardware/3d-prints/palm-rests/palm_rest_tpu.3mf) |
 | Left grip pad (TPU, optional) | 1 | [left_bottom_pad.3mf](../hardware/3d-prints/bottom-pads/left_bottom_pad.3mf) or [grooved](../hardware/3d-prints/bottom-pads/left_bottom_pad_grooved.3mf) |
 | Right grip pad (TPU, optional) | 1 | [right_bottom_pad.3mf](../hardware/3d-prints/bottom-pads/right_bottom_pad.3mf) or [grooved](../hardware/3d-prints/bottom-pads/right_bottom_pad_grooved.3mf) |
+| Silicone sheet cutting template (paper, both halves) | 1 | [silicone_template.pdf](../hardware/3d-prints/bottom-pads/silicone_template.pdf) |
 | Touch ID cap | 1 | [left_touchid_cap.3mf](../hardware/3d-prints/touch-id/left_touchid_cap.3mf) |
 | Touch ID back plate | 1 | [left_touchid_back_plate.3mf](../hardware/3d-prints/touch-id/left_touchid_back_plate.3mf) |
 | Trackball cup and sensor cover | 1 | Coming soon |
@@ -68,7 +69,9 @@ For DIY wooden rests, use two blocks with an overall size of **100 × 79 × 20 m
 
 ### Grip pads
 
-An optional TPU pad covers each case bottom in place of the stick-on feet. It is 0.8 mm thick, with 4.5 mm holes over the screw counterbores so the case still comes apart, and an opening over the trackball hole. Four 0.9 mm plugs on top slot into the feet's recesses and line it up. Remove the stick-on feet first.
+**Silicone sheet (recommended).** Printed TPU, even 95A, slipped on matte wood in testing; silicone grips far better. Cut each half from a 1 mm (1/25 in) adhesive-backed silicone sheet; one 12 x 12 in sheet covers both (each is about 143 x 193 mm). Print [`silicone_template.pdf`](../hardware/3d-prints/bottom-pads/silicone_template.pdf) at 100% and check its 50 mm bar. It is drawn as seen on the upturned case, so lay it on the grippy face. Punch the 4.5 mm screw holes (3/16 in works) and cut the 12.5 mm trackball hole. Remove the stick-on feet first. If the sheet's own adhesive lifts, bond it with a silicone adhesive such as Sil-Poxy.
+
+**Printed TPU pad.** An optional TPU pad covers each case bottom in place of the stick-on feet. It is 0.8 mm thick, with 4.5 mm holes over the screw counterbores so the case still comes apart, and an opening over the trackball hole. Four 0.9 mm plugs on top slot into the feet's recesses and line it up. Remove the stick-on feet first.
 
 - **Filament:** the softest TPU the printer feeds reliably grips best. On a Bambu P2S that is about 82A (Recreus Filaflex 82A) from the external spool, not the AMS; Bambu advises against 75A and softer. 95A works but grips less.
 - **Grooved or plain:** the grooved pads add a hex grid of 0.8 mm grooves, one layer deep, to the desk side, joined to a groove round the edge and a ring round every hole (about 83% stays solid). They bite a little more on matte wood and give dust somewhere to go; the plain pads keep the most contact area for smooth surfaces.

@@ -44,7 +44,8 @@ from params import (
 from switch_plate import export
 
 
-def pad(layout, grooved: bool = False):
+def plan(layout):
+    """The pad's plan view: its outline, the holes and the hole centres (x, y, dia)."""
     _, outer, tray = outlines(layout)
     floor = outer + tray
     if layout.POD_CENTER:
@@ -53,13 +54,19 @@ def pad(layout, grooved: bool = False):
     screws = touchid.case_inserts(layout) + layout.SENSOR_SCREWS
     if layout.POD_CENTER:  # the Touch ID cap's two leg screws
         screws += [(at.position.X, at.position.Y) for at in touchid._leg_points(layout)]
-    holes = [Pos(x, y) * Circle(pad_screw_hole / 2) for x, y in screws]
+    centres = [(x, y, pad_screw_hole) for x, y in screws]
     if layout.TRACKBALL_HOLE:
         x, y = layout.TRACKBALL_HOLE
-        holes.append(Pos(x, y) * Circle(trackball_hole / 2 + pad_hole_clearance))
-    plan = outline - holes
-    assert len(plan.faces()) == 1, f"pad outline split into {len(plan.faces())} faces"
-    body = Pos(0, 0, -pad_thick) * extrude(plan, pad_thick)
+        centres.append((x, y, trackball_hole + 2 * pad_hole_clearance))
+    holes = [Pos(x, y) * Circle(d / 2) for x, y, d in centres]
+    return outline, holes, centres
+
+
+def pad(layout, grooved: bool = False):
+    outline, holes, _ = plan(layout)
+    flat = outline - holes
+    assert len(flat.faces()) == 1, f"pad outline split into {len(flat.faces())} faces"
+    body = Pos(0, 0, -pad_thick) * extrude(flat, pad_thick)
     r = foot_dia / 2 - pad_plug_clearance
     body += [Pos(x, y, pad_plug_height / 2) * Cylinder(r, pad_plug_height) for x, y in layout.FEET]
     if grooved:

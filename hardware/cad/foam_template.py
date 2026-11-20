@@ -75,13 +75,13 @@ def page(foam: Sketch, title: str) -> str:
     return "\n".join(ops)
 
 
-def write_pdf(path, streams):
+def write_pdf(path, streams, size=PAGE):
     objs = ["<< /Type /Catalog /Pages 2 0 R >>", None, "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>"]
     kids = []
     for s in streams:
         objs.append(f"<< /Length {len(s)} >>\nstream\n{s}\nendstream")
         objs.append(
-            f"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 {PAGE[0] * PT:.2f} {PAGE[1] * PT:.2f}] "
+            f"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 {size[0] * PT:.2f} {size[1] * PT:.2f}] "
             f"/Resources << /Font << /F1 3 0 R >> >> /Contents {len(objs)} 0 R >>"
         )
         kids.append(f"{len(objs)} 0 R")
