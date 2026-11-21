@@ -16,8 +16,18 @@
  *     KEYCODE   flags bit0 pressed, a usage page, b modifiers, c keycode
  *     LAYER     flags bit0 active, a layer, b highest active layer, c layer state
  *     DROPPED   c records lost since the last one (buffer full)
+ *     SENSOR_A, SENSOR_B  a pair per second of trackball movement: how evenly
+ *               the sensor's readings reached the input pipeline (the PMW3610
+ *               reads every 4 ms). Time between one reading and the next:
+ *       A: flags under 1 ms (a clump), a 1-3 ms, b 3-5 ms (on time),
+ *          c low byte 5-7 ms, c high byte 7-12 ms
+ *       B: flags 12-100 ms, a longest gap (ms), b most counts in one reading,
+ *          c counts moved (|x| + |y|)
+ *     All capped at 255 (c of B at 65535). Costs one report a second, so it
+ *     doesn't disturb the link it is measuring.
  */
 
+#include <stdlib.h>
 #include <string.h>
 
 #include <zephyr/kernel.h>
@@ -44,6 +54,8 @@ enum keylog_type {
     KEYLOG_KEYCODE = 2,
     KEYLOG_LAYER = 3,
     KEYLOG_DROPPED = 4,
+    KEYLOG_SENSOR_A = 5,
+    KEYLOG_SENSOR_B = 6,
 };
 
 #define RECORD_SIZE 10
@@ -179,6 +191,93 @@ static int keylog_listener(const zmk_event_t *eh) {
 
     return ZMK_EV_EVENT_BUBBLE;
 }
+
+#if IS_ENABLED(CONFIG_INPUT)
+
+#include <zephyr/input/input.h>
+
+/*
+ * Sensor timing probe. Zephyr hands every input event to this callback on the
+ * same thread, and right next to, ZMK's input listener, so the time seen here
+ * is the time the pointer processors see. A reading is one X/Y pair, ended by
+ * the event with sync set.
+ */
+
+#define SENSOR_WINDOW_US 1000000
+#define SENSOR_MOVE_GAP_US 100000
+
+static struct {
+    int64_t window_start_us;
+    int64_t last_us;
+    uint8_t gaps[6]; // <1, 1-3, 3-5, 5-7, 7-12, 12-100 ms
+    uint8_t max_gap_ms;
+    uint8_t max_counts;
+    uint16_t counts;
+    uint16_t readings;
+    uint16_t pending; // |x| + |y| of the reading being received
+} sensor;
+
+static void bump(uint8_t *v) {
+    if (*v < UINT8_MAX) {
+        (*v)++;
+    }
+}
+
+static void sensor_flush(void) {
+    if (sensor.readings > 0) {
+        uint32_t time = (uint32_t)(sensor.window_start_us / 1000);
+        push((struct record){.type = KEYLOG_SENSOR_A,
+                             .flags = sensor.gaps[0],
+                             .a = sensor.gaps[1],
+                             .b = sensor.gaps[2],
+                             .c = sensor.gaps[3] | (sensor.gaps[4] << 8),
+                             .time = time});
+        push((struct record){.type = KEYLOG_SENSOR_B,
+                             .flags = sensor.gaps[5],
+                             .a = sensor.max_gap_ms,
+                             .b = sensor.max_counts,
+                             .c = sensor.counts,
+                             .time = time});
+    }
+    int64_t last = sensor.last_us;
+    memset(&sensor, 0, sizeof(sensor));
+    sensor.last_us = last;
+}
+
+static void sensor_probe_cb(struct input_event *evt) {
+    if (evt->type != INPUT_EV_REL || (evt->code != INPUT_REL_X && evt->code != INPUT_REL_Y)) {
+        return;
+    }
+    sensor.pending += MIN(abs(evt->value), UINT8_MAX);
+    if (!evt->sync) {
+        return;
+    }
+
+    int64_t now = k_ticks_to_us_floor64(k_uptime_ticks());
+    if (now - sensor.window_start_us >= SENSOR_WINDOW_US) {
+        uint16_t pending = sensor.pending;
+        sensor_flush();
+        sensor.pending = pending;
+        sensor.window_start_us = now;
+    }
+
+    int64_t gap = now - sensor.last_us;
+    sensor.last_us = now;
+    if (gap < SENSOR_MOVE_GAP_US) {
+        bump(&sensor.gaps[gap < 1000 ? 0 : gap < 3000 ? 1 : gap < 5000 ? 2 : gap < 7000 ? 3
+                                                              : gap < 12000  ? 4
+                                                                             : 5]);
+        sensor.max_gap_ms = MAX(sensor.max_gap_ms, (uint8_t)(gap / 1000));
+    }
+    sensor.max_counts = MAX(sensor.max_counts, (uint8_t)MIN(sensor.pending, UINT8_MAX));
+    sensor.counts = (uint16_t)MIN((uint32_t)sensor.counts + sensor.pending, UINT16_MAX);
+    sensor.readings++;
+    sensor.pending = 0;
+}
+
+INPUT_CALLBACK_DEFINE(NULL, sensor_probe_cb);
+
+#endif // IS_ENABLED(CONFIG_INPUT)
 
 ZMK_LISTENER(keylog, keylog_listener);
 ZMK_SUBSCRIPTION(keylog, zmk_position_state_changed);

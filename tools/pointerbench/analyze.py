@@ -15,7 +15,10 @@ so pauses of the hand don't count as stutter. For each device:
   late      share over 1.5x the median: the pointer stood still for a frame
   uneven    median change in step size from one report to the next, as a share
             of the step (0% = perfectly steady speed), over steady stretches
-  clipped   reports with an axis at the 8-bit limit (+-127): movement was lost
+  >127      reports with an axis at or past 127 counts. A device with 8-bit
+            reports (Karabiner's virtual mouse) stops there, so on it these
+            lost movement; on a 16-bit device they are what such a relay
+            would cut short
   1-count   share of reports that moved a single count: how much of the time
             the device works at its finest step
 """
@@ -127,7 +130,7 @@ def main(paths):
         for key in sorted(held):
             print(f"  {key[0]} [{key[1]}]: held exclusively by another program, not readable")
         print(f"  {'device':<34}{'reports':>8}{'rate':>8}{'half rate':>10}{'on time':>9}{'bunched':>9}"
-              f"{'late':>7}{'worst':>8}{'uneven':>8}{'clipped':>9}{'1-count':>9}")
+              f"{'late':>7}{'worst':>8}{'uneven':>8}{'>127':>9}{'1-count':>9}")
         for key in sorted(devices):
             s = score(devices[key])
             label = f"{key[0][:24]} [{key[1]}]"
