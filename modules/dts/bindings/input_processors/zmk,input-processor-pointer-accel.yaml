@@ -33,3 +33,11 @@ properties:
     type: int
     default: 400
     description: weight of the newest step in the speed average, out of 1000 (1000 = none)
+  sample-period-us:
+    type: int
+    default: 4000
+    description: |
+      Sensor sample period in microseconds (4000 for a PMW3610 at 250 Hz).
+      Readings less than three periods apart are timed as one period each,
+      because they reach the processor in uneven clumps and their arrival
+      times would make the gain jump between readings.

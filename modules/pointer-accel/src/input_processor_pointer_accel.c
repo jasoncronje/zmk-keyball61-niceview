@@ -4,7 +4,7 @@
  * report by its own size, and BLE packs several sensor readings per report).
  *
  * Speed is the length of each (X, Y) sensor step over the time since the
- * previous step, so diagonals accelerate like straight lines, smoothed over a
+ * previous step (one sample period for back-to-back readings), so diagonals accelerate like straight lines, smoothed over a
  * few steps. The PMW3610 driver reports X then Y (with sync) for every
  * reading. Both axes of one reading get the same gain, the one worked out
  * from the readings before it, so a step's direction is never bent.
@@ -27,8 +27,9 @@ LOG_MODULE_REGISTER(pointer_accel, CONFIG_ZMK_LOG_LEVEL);
 
 /* A gap longer than this starts a new movement from rest. */
 #define IDLE_RESET_US 100000
-/* Shortest step time used for speed, so a burst can't divide by ~0. */
-#define MIN_STEP_US 1000
+/* Readings closer together than this many sample periods are taken as back
+ * to back, one period each (see sample-period-us in the binding). */
+#define BACK_TO_BACK_PERIODS 3
 
 struct pointer_accel_config {
     int32_t low_factor;
@@ -37,6 +38,8 @@ struct pointer_accel_config {
     uint32_t speed_high;
     /* weight of the newest step in the speed average, out of 1000 */
     uint32_t smoothing;
+    /* sensor sample period */
+    uint32_t sample_period_us;
 };
 
 struct pointer_accel_data {
@@ -94,8 +97,17 @@ static int pointer_accel_handle_event(const struct device *dev, struct input_eve
         data->rem_x = 0;
         data->rem_y = 0;
     } else {
-        if (dt < MIN_STEP_US) {
-            dt = MIN_STEP_US;
+        /* Time a step by the sensor's clock, not by when it got here. The
+         * sensor reads every sample period while the ball moves, but readings
+         * reach this processor in clumps: two within 0.2 ms after a 9 ms wait
+         * (USB and BLE, measured on the Mac 2026-11-20). Timed by arrival, the
+         * second of a pair read as 5x too fast and got the full high gain, the
+         * first as 2x too slow, so the gain jumped between 0.7x and 3x from
+         * one reading to the next and small moves and flicks wandered. Longer
+         * gaps are real pauses in a slow roll (the sensor sends nothing when
+         * nothing moved), so they keep their measured time. */
+        if (dt < (int64_t)cfg->sample_period_us * BACK_TO_BACK_PERIODS) {
+            dt = cfg->sample_period_us;
         }
         uint32_t inst = (uint32_t)((int64_t)step * 1000000 / dt);
         data->speed = (uint32_t)(((uint64_t)data->speed * (1000 - cfg->smoothing) +
@@ -116,12 +128,14 @@ static const struct zmk_input_processor_driver_api pointer_accel_driver_api = {
                  "speed-high must be above speed-low");                                            \
     BUILD_ASSERT(DT_INST_PROP(n, smoothing) >= 1 && DT_INST_PROP(n, smoothing) <= 1000,            \
                  "smoothing is 1..1000");                                                          \
+    BUILD_ASSERT(DT_INST_PROP(n, sample_period_us) > 0, "sample-period-us must be positive");     \
     static const struct pointer_accel_config pointer_accel_config_##n = {                          \
         .low_factor = DT_INST_PROP(n, low_factor),                                                 \
         .high_factor = DT_INST_PROP(n, high_factor),                                               \
         .speed_low = DT_INST_PROP(n, speed_low),                                                   \
         .speed_high = DT_INST_PROP(n, speed_high),                                                 \
         .smoothing = DT_INST_PROP(n, smoothing),                                                   \
+        .sample_period_us = DT_INST_PROP(n, sample_period_us),                                     \
     };                                                                                             \
     static struct pointer_accel_data pointer_accel_data_##n = {                                    \
         .factor = DT_INST_PROP(n, low_factor),                                                     \
