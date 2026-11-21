@@ -127,12 +127,11 @@ nice_view_spi: &spi0 {
     // Sensor at ~31.5 counts per mm of ball surface (800 CPI nominal; 700 on
     // keyball61_nv with the roBa cup, which reads 14% high). Gain is
     // low-factor up to speed-low, high-factor from speed-high, a smooth ramp
-    // between. Set overall speed with macOS's Tracking speed slider first,
-    // then the fast gain here.
-    //   low 0.7x below 500 counts/s (16 mm/s), high 3.0x above 5000 (160 mm/s).
-    // Tried: low 0.8x (short moves ever so slightly fast), high 2.5x (flicks
-    // too weak), high 3.5x (long flicks too aggressive), with macOS
-    // acceleration off.
+    // between. Keep the ramp below ordinary flick speed (see the values).
+    // Tried with the old wide curve (500-5000 counts/s): low 0.8x (short moves
+    // ever so slightly fast), high 2.5x (flicks too weak), high 3.5x (long
+    // flicks too aggressive). Linear 2.0x a touch slow, linear 2.3x too
+    // sensitive for small moves (2026-11-20).
     zip_pointer_accel: zip_pointer_accel {
       compatible = "zmk,input-processor-pointer-accel";
       #input-processor-cells = <0>;
