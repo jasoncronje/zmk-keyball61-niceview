@@ -33,6 +33,8 @@ MOVE_GAP_US = 100_000
 
 def xy_from_report(name, data):
     """X, Y from raw report bytes, for the devices whose layout we know."""
+    if len(data) < 6:
+        return None  # a row cut short: the capture is still being written
     if name.startswith("Karabiner"):
         # buttons (4 bytes), x, y, wheel, hwheel as int8
         return struct.unpack_from("bb", data, 4)
