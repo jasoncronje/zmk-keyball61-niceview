@@ -7,6 +7,8 @@ Only reports inside a movement are scored (a gap over 100 ms ends a movement),
 so pauses of the hand don't count as stutter. For each device:
 
   rate      median time between reports while moving
+  half rate share of quarter-second stretches where most reports came bunched
+            or a slot late: the link was delivering every other slot
   on time   share of gaps within 35% of that median: the smooth ones
   bunched   share under 2 ms: two reports delivered together, the pointer
             jumps twice in one screen frame and then stands still
@@ -36,6 +38,13 @@ def xy_from_report(name, data):
         if data[0] != 3 or len(data) < 6:
             return None
         return struct.unpack_from("<hh", data, 2)
+    if name.startswith("MX Ergo"):
+        # id 2, buttons (2 bytes), then x and y packed as 12 bits each
+        if data[0] != 2 or len(data) < 6:
+            return None
+        x = data[3] | ((data[4] & 0x0F) << 8)
+        y = (data[4] >> 4) | (data[5] << 4)
+        return (x - 4096 if x > 2047 else x, y - 4096 if y > 2047 else y)
     return None
 
 
@@ -88,7 +97,17 @@ def score(events):
     if len(gaps) < 20:
         return None
     med = statistics.median(gaps)
+    # Quarter-second windows where most gaps were off the beat.
+    windows = defaultdict(lambda: [0, 0])
+    for (t0, _, _), (t1, _, _) in zip(events, events[1:]):
+        gap = t1 - t0
+        if gap <= MOVE_GAP_US:
+            w = windows[(t1 - events[0][0]) // 250_000]
+            w[0] += 1
+            w[1] += gap < 2000 or gap > 1.5 * med
+    busy = [w for w in windows.values() if w[0] >= 8]
     return {
+        "half_rate": pct(sum(1 for n, bad in busy if bad * 2 >= n), len(busy)),
         "reports": len(events),
         "rate_ms": med / 1000,
         "on_time": pct(sum(1 for g in gaps if abs(g - med) <= 0.35 * med), len(gaps)),
@@ -107,7 +126,7 @@ def main(paths):
         print(f"\n{path}")
         for key in sorted(held):
             print(f"  {key[0]} [{key[1]}]: held exclusively by another program, not readable")
-        print(f"  {'device':<34}{'reports':>8}{'rate':>8}{'on time':>9}{'bunched':>9}"
+        print(f"  {'device':<34}{'reports':>8}{'rate':>8}{'half rate':>10}{'on time':>9}{'bunched':>9}"
               f"{'late':>7}{'worst':>8}{'uneven':>8}{'clipped':>9}{'1-count':>9}")
         for key in sorted(devices):
             s = score(devices[key])
@@ -115,7 +134,7 @@ def main(paths):
             if s is None:
                 print(f"  {label:<34}{len(devices[key]):>8}  too little movement to score")
                 continue
-            print(f"  {label:<34}{s['reports']:>8}{s['rate_ms']:>6.1f}ms{s['on_time']:>8.0f}%"
+            print(f"  {label:<34}{s['reports']:>8}{s['rate_ms']:>6.1f}ms{s['half_rate']:>9.0f}%{s['on_time']:>8.0f}%"
                   f"{s['bunched']:>8.0f}%{s['late']:>6.0f}%{s['worst_ms']:>6.0f}ms"
                   f"{s['uneven']:>7.0f}%{s['clipped']:>9}{s['one_count']:>8.0f}%")
 
