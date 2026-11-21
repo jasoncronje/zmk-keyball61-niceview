@@ -155,10 +155,7 @@ nice_view_spi: &spi0 {
   trackball_listener {
     compatible = "zmk,input-listener";
     device = <&trackball>;
-    // TEST 2026-11-20: firmware acceleration off to isolate the "drunk"
-    // pointer (small moves and flicks). Restore: put <&zip_pointer_accel>,
-    // back in front of zip_temp_layer.
-    input-processors = <&zip_temp_layer 3 700>;
+    input-processors = <&zip_pointer_accel>, <&zip_temp_layer 3 700>;
 
     hscroll_layer_config {
       layers = <5>;
