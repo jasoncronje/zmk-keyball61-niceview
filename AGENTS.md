@@ -34,6 +34,7 @@ If the user runs the key logger (`tools/keylog`), the right half needs the `-key
 - Screen changes: render them with `python3 modules/status-screen/scripts/preview.py <dir>` and show the PNGs (Markdown images, absolute paths) before building.
 - Tap, hold and double-tap timings: read the key log first (`python3 tools/keylog/analyze.py --days 7`). Leave values that were tried and rejected in a comment next to the setting.
 - Firmware misbehaves and the cause isn't in the code: get logs from the keyboard, don't guess from the Mac. Build the affected half with the `zmk-usb-logging` snippet and ZMK Studio off, read `/dev/cu.usbmodem*` at 115200, then flash the normal build back.
+- Pointer feels rough or uneven: measure before touching firmware. `python3 tools/pointerbench/bench.py` records the trackball and a reference mouse and scores report timing on the Mac. A device listed as held exclusively is being rerouted by another program (Karabiner-Elements grabs keyboards that also report a mouse, and replays the pointer through an 8-bit virtual mouse), so check that first.
 - Bluetooth timing on macOS: check what the host applied with `/usr/bin/log show --last 10m --predicate 'process == "bluetoothd" AND eventMessage CONTAINS[c] "parameters"'`, not by feel. Plain `log` is a zsh builtin and prints nothing.
 - Soldering or probing: name the pad by the label printed on the PCB and where it sits. The PCB prints AVR names (table in `README.md`), so `pm1` or `P0.06` alone means nothing to the user.
 - Tests: `python3 -m unittest discover -s tests`.
