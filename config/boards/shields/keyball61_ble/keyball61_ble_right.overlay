@@ -141,9 +141,6 @@ nice_view_spi: &spi0 {
       speed-low = <500>;
       speed-high = <5000>;
       smoothing = <400>;
-      // PMW3610 at 250 Hz. Steps are timed by this, not by arrival (readings
-      // arrive in clumps, which made the gain jump; fixed 2026-11-20).
-      sample-period-us = <4000>;
     };
 
     zip_temp_layer: zip_temp_layer {
