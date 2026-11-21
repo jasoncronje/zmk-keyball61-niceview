@@ -136,16 +136,18 @@ nice_view_spi: &spi0 {
     zip_pointer_accel: zip_pointer_accel {
       compatible = "zmk,input-processor-pointer-accel";
       #input-processor-cells = <0>;
-      // Linear since 2026-11-20: constant 2.3x (2.0x a touch slow), like the MX Ergo with macOS
-      // acceleration off. With low 0.7x / high 3.0x the gain went from 1x to
-      // 3x between 5 and 20 counts per 4 ms reading (debug log), right in
-      // the range of normal hand speed, so a fast flick and a slightly slower
-      // return did not cancel and back-and-forth flicks walked the pointer
-      // across the screen. Set overall speed with macOS's Tracking speed.
-      low-factor = <2300>;
+      // 2026-11-20: precision slow-down only, flat above it. The old curve
+      // (0.7x to 3.0x over 500-5000 counts/s) ramped across ordinary flick
+      // speed (5-20 counts per 4 ms reading, debug log), so a flick and its
+      // slightly slower return got different gains and back-and-forth flicks
+      // walked the pointer across the screen. Linear 2.3x fixed that but made
+      // small moves too sensitive (2.0x was a touch slow overall). Now 1.4x
+      // below 400 counts/s (under ~2 counts per reading: fine aiming), 2.3x
+      // from 1500 (6 per reading) up, so flicks stay in the flat part.
+      low-factor = <1400>;
       high-factor = <2300>;
-      speed-low = <500>;
-      speed-high = <5000>;
+      speed-low = <400>;
+      speed-high = <1500>;
       smoothing = <400>;
     };
 
