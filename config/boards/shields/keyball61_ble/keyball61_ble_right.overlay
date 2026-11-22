@@ -136,7 +136,8 @@ nice_view_spi: &spi0 {
       compatible = "zmk,input-processor-pointer-accel";
       #input-processor-cells = <0>;
       // 2026-11-21: real acceleration again, 1.0x for fine aiming up to
-      // 500 counts/s, ramping to 3.0x from 5000 (the old curve's speeds).
+      // 500 counts/s, ramping to 3.5x from 5000 (the old curve's speeds).
+      // 3.0x on the gray ball: large moves wanted more (2026-11-21).
       // Everything tuned 2026-11-17 to 11-20 was on a dark purple ball the
       // sensor's infrared barely sees, so slow movement was lost. That is
       // likely what made back-and-forth flicks walk on the old 0.7x-3.0x
@@ -146,7 +147,7 @@ nice_view_spi: &spi0 {
       // slow), linear 2.3x (small moves too sensitive), 1.4x-2.3x over
       // 400-1500 (felt static).
       low-factor = <1000>;
-      high-factor = <3000>;
+      high-factor = <3500>;
       speed-low = <500>;
       speed-high = <5000>;
       smoothing = <400>;
