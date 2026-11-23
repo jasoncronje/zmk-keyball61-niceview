@@ -151,9 +151,9 @@ layers:
   - {t: '$$mdi:transfer$$', type: trans}
   - {t: '$$mdi:transfer$$', type: trans}
   - '&td_bt_clr'
-  - {t: '1', h: 'off', s: '$$mdi:bluetooth-connect$$'}
-  - {t: '2', h: 'off', s: '$$mdi:bluetooth-connect$$'}
-  - {t: '3', h: 'off', s: '$$mdi:bluetooth-connect$$'}
+  - {t: '1', h: kbd, s: '$$mdi:bluetooth-connect$$'}
+  - {t: '2', h: kbd, s: '$$mdi:bluetooth-connect$$'}
+  - {t: '3', h: kbd, s: '$$mdi:bluetooth-connect$$'}
   - OUT TOG
   - {t: '$$mdi:transfer$$', type: trans}
   - $$mdi:skip-previous$$
