@@ -183,18 +183,18 @@ parse_config:
       type: none
 
     # Bluetooth
-    "&bt BT_SEL 0":
+    "&ht_bt 0 0":
       shifted: $$mdi:bluetooth-connect$$
-      tap: ""
-      hold: 1
-    "&bt BT_SEL 1":
+      tap: "1"
+      hold: "off"
+    "&ht_bt 1 1":
       shifted: $$mdi:bluetooth-connect$$
-      tap: ""
-      hold: 2
-    "&bt BT_SEL 2":
+      tap: "2"
+      hold: "off"
+    "&ht_bt 2 2":
       shifted: $$mdi:bluetooth-connect$$
-      tap: ""
-      hold: 3
+      tap: "3"
+      hold: "off"
 
   # ZMK
   zmk_keycode_map:
