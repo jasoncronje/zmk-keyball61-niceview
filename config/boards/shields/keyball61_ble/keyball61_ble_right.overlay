@@ -151,8 +151,13 @@ nice_view_spi: &spi0 {
       // 2026-11-24: speed-high 2500 -> 4000. Two tools/aimtest runs at 2500:
       // short (240 px) and mid (720 px) moves overshot (mid 9% and 22% past
       // the target, 4 of 7 by more than 10%), long moves only 3-6%. Quick
-      // short flicks reached the top gain too soon.
-      low-factor = <1000>;
+      // short flicks reached the top gain too soon. At 4000: short 5% past,
+      // mid 10% (3 of 14 big), long 2%; overshoot flat across speeds.
+      // 2026-11-24: low-factor 1.0x -> 0.75x. Slow aiming wandered ("drunk
+      // driving"): on 16 px targets the last 40 px took 0.8-1.0 s, travelled
+      // 80-100 px and entered the target about twice. 1.0x was never tested
+      // low on the gray ball (the purple ball lost slow counts).
+      low-factor = <750>;
       high-factor = <3500>;
       speed-low = <500>;
       speed-high = <4000>;
