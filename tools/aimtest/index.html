@@ -1,0 +1,479 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pointer Aim Test</title>
+<!--
+  Click targets at short, mid and long distances. For every move the page
+  finds where the first (ballistic) movement stopped, before any correction,
+  and how far that was from the target along the line of travel. That error
+  against peak speed is the acceleration curve as you feel it:
+
+    error rises with speed     -> high gain too strong, or the ramp starts too early
+    long moves fall short      -> high gain too weak
+    short, slow moves overshoot / hunt around small targets -> low gain (DPI) too high
+    short moves fall short     -> low gain too low
+
+  Open the file straight in a browser (no server). Sessions are kept in the
+  browser's localStorage; "Export" saves them as JSON.
+-->
+<style>
+  :root {
+    --bg: #f6f6f3; --panel: #ffffff; --ink: #1b1c1e; --muted: #6b6e75;
+    --line: #dcdcd6; --accent: #2f6fde; --target: #e0483d; --good: #23905a;
+    --warn: #c07a12; --on-accent: #ffffff; --short: #2f6fde; --mid: #23905a; --long: #c2417a;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #141518; --panel: #1d1f23; --ink: #e8e8e6; --muted: #9a9ca3;
+      --line: #33363c; --accent: #6b9cff; --target: #ff6a5c; --good: #4cc38a;
+      --warn: #e5a43a; --on-accent: #0b1020; --short: #6b9cff; --mid: #4cc38a; --long: #f07aaa;
+    }
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: var(--bg); color: var(--ink);
+    font: 15px/1.45 -apple-system, BlinkMacSystemFont, "Inter", system-ui, sans-serif; }
+  #arena { position: fixed; inset: 0; display: none; cursor: default; }
+  #arena canvas { width: 100%; height: 100%; display: block; }
+  #hud { position: fixed; top: 12px; left: 50%; transform: translateX(-50%);
+    color: var(--muted); font-size: 13px; pointer-events: none; display: none;
+    font-variant-numeric: tabular-nums; }
+  main { max-width: 980px; margin: 0 auto; padding: 32px 16px 64px; }
+  h1 { font-size: 24px; margin: 0 0 4px; letter-spacing: -0.01em; }
+  h2 { font-size: 16px; margin: 32px 0 10px; }
+  p.sub { color: var(--muted); margin: 0 0 24px; }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 18px; }
+  .row { display: flex; gap: 12px; flex-wrap: wrap; align-items: end; }
+  label { display: flex; flex-direction: column; gap: 4px; font-size: 13px; color: var(--muted); }
+  input, select { font: inherit; color: var(--ink); background: var(--bg); border: 1px solid var(--line);
+    border-radius: 8px; padding: 8px 10px; min-width: 0; }
+  input[type=text] { width: 260px; max-width: 100%; }
+  button { font: inherit; border: 1px solid var(--line); background: var(--panel); color: var(--ink);
+    border-radius: 8px; padding: 8px 14px; cursor: pointer; }
+  button.primary { background: var(--accent); border-color: var(--accent); color: var(--on-accent); font-weight: 600; }
+  button:hover { filter: brightness(1.05); }
+  .verdict { font-size: 17px; font-weight: 600; margin: 0 0 10px; }
+  ul.findings { margin: 0; padding-left: 20px; }
+  ul.findings li { margin: 4px 0; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; }
+  table { border-collapse: collapse; width: 100%; font-variant-numeric: tabular-nums; font-size: 14px; }
+  th, td { text-align: right; padding: 6px 8px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+  th:first-child, td:first-child { text-align: left; }
+  th { color: var(--muted); font-weight: 500; font-size: 12px; }
+  .tablewrap { overflow-x: auto; }
+  .pos { color: var(--target); } .neg { color: var(--accent); } .ok { color: var(--good); }
+  canvas.chart { width: 100%; height: 300px; display: block; }
+  .legend { display: flex; gap: 14px; font-size: 12px; color: var(--muted); margin-top: 6px; flex-wrap: wrap; }
+  .dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 5px; vertical-align: middle; }
+  .muted { color: var(--muted); font-size: 13px; }
+  #results { display: none; }
+</style>
+</head>
+<body>
+<div id="arena"><canvas id="cv"></canvas></div>
+<div id="hud"></div>
+
+<main id="home">
+  <h1>Pointer aim test</h1>
+  <p class="sub">Click each red target as fast as you comfortably can. The page measures where your first push stops, before you correct, at short, mid and long distances. Takes about 90 seconds. Esc aborts.</p>
+
+  <div class="card">
+    <div class="row">
+      <label>Label for this run (the setting you're testing)
+        <input id="label" type="text" placeholder="e.g. 1.0x→3.5x, ramp 500–2500">
+      </label>
+      <label>Device
+        <select id="device"><option>Keyball trackball</option><option>Reference mouse</option><option>Trackpad</option><option>Other</option></select>
+      </label>
+      <label>Length
+        <select id="reps"><option value="3">Quick (27 targets)</option><option value="5" selected>Normal (45)</option><option value="8">Long (72)</option></select>
+      </label>
+      <button class="primary" id="start">Start</button>
+    </div>
+    <p class="muted" style="margin:12px 0 0">Keep the browser window the same size between runs so distances match. macOS pointer acceleration should stay off (the firmware does it).</p>
+  </div>
+
+  <section id="results">
+    <h2 id="rtitle">Result</h2>
+    <div class="card">
+      <p class="verdict" id="verdict"></p>
+      <ul class="findings" id="findings"></ul>
+    </div>
+
+    <h2>Where the first push stopped, by distance</h2>
+    <div class="card tablewrap"><table id="bins"></table>
+      <p class="muted" style="margin:10px 0 0">Landing error: + past the target, − short of it, as % of the distance. Within ±5% is good. Passed: how often the path went beyond the far edge. Fixes: extra pushes after the first.</p>
+    </div>
+
+    <div class="grid" style="margin-top:16px">
+      <div class="card">
+        <div style="font-weight:600;margin-bottom:6px">Landing error vs peak speed</div>
+        <canvas class="chart" id="scatter"></canvas>
+        <div class="legend"><span><span class="dot" style="background:var(--short)"></span>short</span><span><span class="dot" style="background:var(--mid)"></span>mid</span><span><span class="dot" style="background:var(--long)"></span>long</span><span>line: average per speed band</span></div>
+        <p class="muted" style="margin:8px 0 0">A flat line near 0 means the acceleration curve matches your hand. Rising to the right: fast moves carry too far.</p>
+      </div>
+      <div class="card">
+        <div style="font-weight:600;margin-bottom:6px">Paths, aligned to the target (target at right)</div>
+        <canvas class="chart" id="paths"></canvas>
+        <p class="muted" style="margin:8px 0 0">Every move rotated so it runs left to right and scaled so the target sits at the dashed line. Loops past the line are overshoots.</p>
+      </div>
+    </div>
+  </section>
+
+  <h2>Saved runs</h2>
+  <div class="card tablewrap">
+    <table id="sessions"></table>
+    <div class="row" style="margin-top:12px">
+      <button id="export">Export JSON</button>
+      <button id="clear">Delete all runs</button>
+    </div>
+  </div>
+</main>
+
+<script>
+(() => {
+  const $ = (id) => document.getElementById(id);
+  const arena = $("arena"), cv = $("cv"), ctx = cv.getContext("2d"), hud = $("hud");
+  const STORE = "aimtest.sessions.v1";
+  const BINS = [
+    { key: "short", name: "Short", frac: 0.10 },
+    { key: "mid", name: "Mid", frac: 0.30 },
+    { key: "long", name: "Long", frac: 0.62 },
+  ];
+  const SIZES = [8, 16, 30]; // target radius, CSS px
+
+  const css = (v) => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+  const mean = (a) => a.length ? a.reduce((s, x) => s + x, 0) / a.length : NaN;
+  const median = (a) => { if (!a.length) return NaN; const s = [...a].sort((x, y) => x - y); const m = s.length >> 1; return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2; };
+  const fmt = (x, d = 0) => Number.isFinite(x) ? x.toFixed(d) : "–";
+  const signed = (x, d = 0) => Number.isFinite(x) ? (x > 0 ? "+" : "") + x.toFixed(d) : "–";
+
+  function loadSessions() { try { return JSON.parse(localStorage.getItem(STORE)) || []; } catch { return []; } }
+  function saveSessions(s) { try { localStorage.setItem(STORE, JSON.stringify(s)); } catch (e) { console.warn("save failed", e); } }
+
+  // ---------- run state ----------
+  let run = null;
+
+  function fitCanvas() {
+    const dpr = window.devicePixelRatio || 1;
+    cv.width = Math.round(innerWidth * dpr); cv.height = Math.round(innerHeight * dpr);
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
+
+  function shuffle(a) { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; }
+
+  function placeTarget(from, bin, r) {
+    const W = innerWidth, H = innerHeight, m = r + 24;
+    const diag = Math.min(Math.hypot(W, H), 2400);
+    let D = bin.frac * diag;
+    for (let shrink = 0; shrink < 12; shrink++) {
+      for (let k = 0; k < 60; k++) {
+        const a = Math.random() * Math.PI * 2;
+        const x = from.x + Math.cos(a) * D, y = from.y + Math.sin(a) * D;
+        if (x > m && x < W - m && y > m + 30 && y < H - m) return { x, y, D };
+      }
+      D *= 0.9;
+    }
+    return { x: W / 2, y: H / 2, D: Math.hypot(W / 2 - from.x, H / 2 - from.y) };
+  }
+
+  function startRun() {
+    const reps = +$("reps").value;
+    const plan = [];
+    for (const b of BINS) for (const r of SIZES) for (let i = 0; i < reps; i++) plan.push({ bin: b, r });
+    shuffle(plan);
+    run = {
+      label: $("label").value.trim() || "unlabelled",
+      device: $("device").value,
+      plan, i: -1, trials: [], cur: null,
+      screen: { w: innerWidth, h: innerHeight, dpr: devicePixelRatio || 1 },
+      started: new Date().toISOString(),
+    };
+    $("home").style.display = "none";
+    arena.style.display = "block"; hud.style.display = "block";
+    fitCanvas();
+    // warm-up target in the centre; the timed trials start from where it is clicked
+    run.cur = { warm: true, x: innerWidth / 2, y: innerHeight / 2, r: 30 };
+    draw();
+  }
+
+  function nextTrial(from, t0) {
+    run.i++;
+    if (run.i >= run.plan.length) return finishRun();
+    const p = run.plan[run.i];
+    const t = placeTarget(from, p.bin, p.r);
+    run.cur = { bin: p.bin.key, r: p.r, x: t.x, y: t.y, D: t.D, sx: from.x, sy: from.y, t0, path: [[0, from.x, from.y]], misses: 0 };
+    draw();
+  }
+
+  function draw() {
+    ctx.clearRect(0, 0, innerWidth, innerHeight);
+    const c = run && run.cur; if (!c) return;
+    ctx.fillStyle = css("--target");
+    ctx.beginPath(); ctx.arc(c.x, c.y, c.r, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = css("--bg");
+    ctx.beginPath(); ctx.arc(c.x, c.y, Math.max(1.5, c.r * 0.12), 0, Math.PI * 2); ctx.fill();
+    if (c.warm) {
+      ctx.fillStyle = css("--muted"); ctx.font = "14px -apple-system, system-ui"; ctx.textAlign = "center";
+      ctx.fillText("Click to begin", c.x, c.y + c.r + 24);
+    }
+    hud.textContent = c.warm ? `${run.label} · ${run.device}` : `${run.i + 1} / ${run.plan.length}`;
+  }
+
+  function onMove(e) {
+    const c = run && run.cur; if (!c || c.warm) return;
+    const evs = e.getCoalescedEvents ? e.getCoalescedEvents() : [e];
+    for (const ev of (evs.length ? evs : [e])) c.path.push([ev.timeStamp - c.t0, ev.clientX, ev.clientY]);
+  }
+
+  function onDown(e) {
+    if (!run || e.button !== 0) return;
+    e.preventDefault();
+    const c = run.cur;
+    const hit = Math.hypot(e.clientX - c.x, e.clientY - c.y) <= c.r;
+    if (c.warm) { if (hit) nextTrial({ x: e.clientX, y: e.clientY }, e.timeStamp); return; }
+    c.path.push([e.timeStamp - c.t0, e.clientX, e.clientY]);
+    if (!hit) { c.misses++; return; }
+    c.click = [e.timeStamp - c.t0, e.clientX, e.clientY];
+    run.trials.push(analyzeTrial(c));
+    nextTrial({ x: e.clientX, y: e.clientY }, e.timeStamp);
+  }
+
+  // ---------- per-trial analysis ----------
+  function analyzeTrial(c) {
+    const ux = (c.x - c.sx) / c.D, uy = (c.y - c.sy) / c.D; // unit vector start -> target
+    const pts = c.path;
+    // resample to 4 ms
+    const T = c.click[0], step = 4, rs = [];
+    let j = 0;
+    for (let t = 0; t <= T; t += step) {
+      while (j < pts.length - 2 && pts[j + 1][0] < t) j++;
+      const a = pts[j], b = pts[Math.min(j + 1, pts.length - 1)];
+      const f = b[0] > a[0] ? Math.min(1, Math.max(0, (t - a[0]) / (b[0] - a[0]))) : 0;
+      rs.push([t, a[1] + (b[1] - a[1]) * f, a[2] + (b[2] - a[2]) * f]);
+    }
+    const n = rs.length;
+    const along = rs.map(p => (p[1] - c.sx) * ux + (p[2] - c.sy) * uy);
+    const across = rs.map(p => -(p[1] - c.sx) * uy + (p[2] - c.sy) * ux);
+    // speed (px/s), central difference, then 5-tap (20 ms) moving average
+    const raw = new Array(n).fill(0);
+    for (let i = 1; i < n - 1; i++) raw[i] = Math.hypot(rs[i + 1][1] - rs[i - 1][1], rs[i + 1][2] - rs[i - 1][2]) / (2 * step / 1000);
+    const sp = raw.map((_, i) => { let s = 0, k = 0; for (let d = -2; d <= 2; d++) if (raw[i + d] !== undefined) { s += raw[i + d]; k++; } return s / k; });
+
+    let onset = sp.findIndex((v, i) => Math.hypot(rs[i][1] - c.sx, rs[i][2] - c.sy) > 3);
+    if (onset < 0) onset = 0;
+    // primary (ballistic) movement: from onset until speed first falls below
+    // 10% of the peak reached so far; corrections come after that stop
+    let pk = onset, end = n - 1;
+    for (let i = onset; i < n; i++) {
+      if (sp[i] > sp[pk]) pk = i;
+      if (sp[pk] > 150 && sp[i] < Math.max(0.1 * sp[pk], 40)) { end = i; break; }
+    }
+    const peak = sp[pk];
+    const primaryErr = along[end] - c.D;           // + past target centre
+    const primaryLat = across[end];
+    // corrective submovements after the primary stop
+    const hi = Math.max(0.12 * peak, 80), lo = hi * 0.5;
+    let corrections = 0, moving = false;
+    for (let i = end; i < n; i++) { if (!moving && sp[i] > hi) { moving = true; corrections++; } else if (moving && sp[i] < lo) moving = false; }
+    const maxAlong = Math.max(...along);
+    const passed = maxAlong > c.D + c.r;
+    // entries into the target circle
+    let entries = 0, inside = false, firstIn = null;
+    for (let i = 0; i < n; i++) {
+      const d = Math.hypot(rs[i][1] - c.x, rs[i][2] - c.y) <= c.r;
+      if (d && !inside) { entries++; if (firstIn === null) firstIn = rs[i][0]; }
+      inside = d;
+    }
+    const mt = (T - rs[onset][0]) / 1000;
+    const ID = Math.log2(c.D / (2 * c.r) + 1);
+    // keep a decimated, target-normalised path for the overlay plot
+    const shape = [];
+    for (let i = onset; i < n; i += 3) shape.push([+(along[i] / c.D).toFixed(3), +(across[i] / c.D).toFixed(3)]);
+    return {
+      bin: c.bin, r: c.r, D: +c.D.toFixed(1), peak: Math.round(peak),
+      err: +primaryErr.toFixed(1), errPct: +(100 * primaryErr / c.D).toFixed(1), latPct: +(100 * primaryLat / c.D).toFixed(1),
+      overshoot: +Math.max(0, maxAlong - c.D - c.r).toFixed(1), passed,
+      corrections, entries, misses: c.misses,
+      settle: firstIn === null ? null : Math.round(T - firstIn), mt: +mt.toFixed(3), rt: Math.round(rs[onset][0]),
+      tp: +(ID / mt).toFixed(2), shape,
+    };
+  }
+
+  // ---------- summary & diagnosis ----------
+  function summarize(trials) {
+    const by = {};
+    for (const b of BINS) {
+      const t = trials.filter(x => x.bin === b.key);
+      by[b.key] = {
+        n: t.length, D: median(t.map(x => x.D)),
+        errPct: median(t.map(x => x.errPct)),
+        passed: t.length ? t.filter(x => x.passed).length / t.length : NaN,
+        corr: mean(t.map(x => x.corrections)),
+        settle: median(t.filter(x => x.settle !== null).map(x => x.settle)),
+        smallSettle: median(t.filter(x => x.r === SIZES[0] && x.settle !== null).map(x => x.settle)),
+        entries: mean(t.map(x => x.entries)),
+        mt: median(t.map(x => x.mt)), peak: median(t.map(x => x.peak)),
+        misses: t.reduce((s, x) => s + x.misses, 0),
+      };
+    }
+    // speed bands (quartiles of peak speed)
+    const sorted = [...trials].sort((a, b) => a.peak - b.peak);
+    const bands = [];
+    const k = 4;
+    for (let i = 0; i < k; i++) {
+      const s = sorted.slice(Math.floor(i * sorted.length / k), Math.floor((i + 1) * sorted.length / k));
+      if (s.length) bands.push({ lo: s[0].peak, hi: s[s.length - 1].peak, mid: median(s.map(x => x.peak)), errPct: median(s.map(x => x.errPct)), n: s.length });
+    }
+    const tp = mean(trials.map(x => x.tp));
+    return { by, bands, tp, misses: trials.reduce((s, x) => s + x.misses, 0), n: trials.length };
+  }
+
+  function diagnose(S) {
+    const f = [];
+    const s = S.by.short, m = S.by.mid, l = S.by.long;
+    const OK = 5;
+    const say = (b, name) => {
+      if (!Number.isFinite(b.errPct)) return;
+      if (b.errPct > OK) f.push({ w: b.errPct, t: `${name} moves land ${fmt(b.errPct)}% past the target.` });
+      else if (b.errPct < -OK) f.push({ w: -b.errPct, t: `${name} moves stop ${fmt(-b.errPct)}% short.` });
+    };
+    say(s, "Short"); say(m, "Mid"); say(l, "Long");
+
+    const advice = [];
+    if (l.errPct > OK && (s.errPct <= OK)) advice.push("Lower high-factor, or move speed-high up so the top gain arrives later.");
+    if (l.errPct < -OK && l.corr > 0.8) advice.push("Raise high-factor: long moves need extra pushes.");
+    if (m.errPct > OK && l.errPct <= OK && s.errPct <= OK) advice.push("The ramp is too steep in the middle: raise speed-low or widen the ramp.");
+    if (m.errPct < -OK && l.errPct >= -OK) advice.push("The ramp starts too late: lower speed-low.");
+    if (s.errPct > OK || (Number.isFinite(s.smallSettle) && s.smallSettle > 350 && s.entries > 1.6)) advice.push("Fine aiming is too twitchy: lower low-factor (or the sensor CPI).");
+    if (s.errPct < -OK && s.corr > 0.8) advice.push("Small moves feel sluggish: raise low-factor a little.");
+
+    // speed trend
+    if (S.bands.length >= 3) {
+      const first = S.bands[0].errPct, last = S.bands[S.bands.length - 1].errPct;
+      const slope = last - first;
+      if (slope > 10) f.push({ w: slope / 2, t: `Error climbs ${fmt(slope)} points from slow to fast moves: the curve adds too much as you speed up.` });
+      if (slope < -10) f.push({ w: -slope / 2, t: `Error falls ${fmt(-slope)} points from slow to fast moves: fast moves get too little boost.` });
+    }
+
+    // lateral drift (curve walk)
+    const verdictOk = !f.length && !advice.length;
+    return {
+      verdict: verdictOk ? "Speed and acceleration match your hand: every distance lands within ±5%." : (advice[0] || f.sort((a, b) => b.w - a.w)[0].t),
+      findings: [...f.sort((a, b) => b.w - a.w).map(x => x.t), ...advice.slice(verdictOk ? 0 : 1)],
+    };
+  }
+
+  function finishRun() {
+    arena.style.display = "none"; hud.style.display = "none"; $("home").style.display = "block";
+    const S = summarize(run.trials);
+    const session = { label: run.label, device: run.device, started: run.started, screen: run.screen, summary: S, trials: run.trials };
+    const all = loadSessions(); all.push(session); saveSessions(all);
+    run = null;
+    showResult(session);
+    renderSessions();
+  }
+
+  function showResult(sess) {
+    const S = sess.summary;
+    $("results").style.display = "block";
+    $("rtitle").textContent = `Result: ${sess.label} (${sess.device})`;
+    const d = diagnose(S);
+    $("verdict").textContent = d.verdict;
+    $("findings").innerHTML = d.findings.map(x => `<li>${x}</li>`).join("") +
+      `<li class="muted">Throughput ${fmt(S.tp, 2)} bits/s · ${S.misses} misclicks over ${S.n} targets.</li>`;
+
+    const cls = (x) => !Number.isFinite(x) ? "" : x > 5 ? "pos" : x < -5 ? "neg" : "ok";
+    let h = `<tr><th>Distance</th><th>px</th><th>Landing error</th><th>Passed</th><th>Fixes</th><th>Settle (small)</th><th>Peak px/s</th><th>Time</th></tr>`;
+    for (const b of BINS) {
+      const x = S.by[b.key];
+      h += `<tr><td>${b.name}</td><td>${fmt(x.D)}</td><td class="${cls(x.errPct)}">${signed(x.errPct)}%</td><td>${fmt(x.passed * 100)}%</td><td>${fmt(x.corr, 1)}</td><td>${fmt(x.smallSettle)} ms</td><td>${fmt(x.peak)}</td><td>${fmt(x.mt * 1000)} ms</td></tr>`;
+    }
+    $("bins").innerHTML = h;
+    drawScatter(sess); drawPaths(sess);
+    $("results").scrollIntoView({ behavior: "smooth" });
+  }
+
+  function chartCtx(c) {
+    const dpr = devicePixelRatio || 1, w = c.clientWidth, h = c.clientHeight;
+    c.width = w * dpr; c.height = h * dpr;
+    const g = c.getContext("2d"); g.setTransform(dpr, 0, 0, dpr, 0, 0); g.clearRect(0, 0, w, h);
+    return { g, w, h };
+  }
+
+  function drawScatter(sess) {
+    const { g, w, h } = chartCtx($("scatter"));
+    const T = sess.trials; if (!T.length) return;
+    const pad = { l: 44, r: 10, t: 10, b: 28 };
+    const xmax = Math.max(...T.map(t => t.peak)) * 1.05;
+    const lim = Math.min(80, Math.max(30, ...T.map(t => Math.abs(t.errPct))));
+    const X = (v) => pad.l + (v / xmax) * (w - pad.l - pad.r);
+    const Y = (v) => pad.t + (1 - (v + lim) / (2 * lim)) * (h - pad.t - pad.b);
+    g.font = "11px -apple-system, system-ui"; g.fillStyle = css("--muted"); g.strokeStyle = css("--line"); g.lineWidth = 1;
+    for (const v of [-lim, -lim / 2, 0, lim / 2, lim]) { g.beginPath(); g.moveTo(pad.l, Y(v)); g.lineTo(w - pad.r, Y(v)); g.stroke(); g.textAlign = "right"; g.fillText((v > 0 ? "+" : "") + Math.round(v) + "%", pad.l - 6, Y(v) + 4); }
+    g.fillStyle = css("--good"); g.globalAlpha = 0.12; g.fillRect(pad.l, Y(5), w - pad.l - pad.r, Y(-5) - Y(5)); g.globalAlpha = 1;
+    g.fillStyle = css("--muted"); g.textAlign = "center";
+    const tick = xmax > 6000 ? 2000 : xmax > 3000 ? 1000 : 500;
+    for (let v = 0; v <= xmax; v += tick) g.fillText(v, X(v), h - 10);
+    g.fillText("peak speed, px/s", (w + pad.l) / 2, h - 0);
+    const col = { short: css("--short"), mid: css("--mid"), long: css("--long") };
+    for (const t of T) { g.fillStyle = col[t.bin]; g.globalAlpha = 0.75; g.beginPath(); g.arc(X(t.peak), Y(Math.max(-lim, Math.min(lim, t.errPct))), 3.5, 0, 7); g.fill(); }
+    g.globalAlpha = 1; g.strokeStyle = css("--ink"); g.lineWidth = 2; g.beginPath();
+    sess.summary.bands.forEach((b, i) => { const p = [X(b.mid), Y(Math.max(-lim, Math.min(lim, b.errPct)))]; i ? g.lineTo(...p) : g.moveTo(...p); });
+    g.stroke();
+  }
+
+  function drawPaths(sess) {
+    const { g, w, h } = chartCtx($("paths"));
+    const pad = 16, x0 = pad, x1 = w - pad - 60; // target at x1 means along = 1
+    const sx = (x1 - x0), cy = h / 2;
+    const X = (a) => x0 + a * sx, Y = (c) => cy + c * sx;
+    g.strokeStyle = css("--line"); g.setLineDash([4, 4]); g.beginPath(); g.moveTo(X(1), 8); g.lineTo(X(1), h - 8); g.stroke(); g.setLineDash([]);
+    const col = { short: css("--short"), mid: css("--mid"), long: css("--long") };
+    g.lineWidth = 1.2;
+    for (const t of sess.trials) {
+      g.strokeStyle = col[t.bin]; g.globalAlpha = 0.35; g.beginPath();
+      t.shape.forEach((p, i) => { const q = [X(Math.min(1.25, p[0])), Y(Math.max(-0.25, Math.min(0.25, p[1])))]; i ? g.lineTo(...q) : g.moveTo(...q); });
+      g.stroke();
+    }
+    g.globalAlpha = 1; g.fillStyle = css("--muted"); g.font = "11px -apple-system, system-ui"; g.textAlign = "center";
+    g.fillText("target", X(1), h - 2); g.fillText("+25% past", X(1.25), h - 2);
+  }
+
+  function renderSessions() {
+    const all = loadSessions();
+    if (!all.length) { $("sessions").innerHTML = `<tr><td class="muted">No runs yet.</td></tr>`; return; }
+    let h = `<tr><th>Run</th><th>Device</th><th>When</th><th>Short</th><th>Mid</th><th>Long</th><th>Fixes (long)</th><th>Bits/s</th><th></th></tr>`;
+    all.slice().reverse().forEach((s, ri) => {
+      const i = all.length - 1 - ri, S = s.summary;
+      const c = (x) => `<td class="${!Number.isFinite(x) ? "" : x > 5 ? "pos" : x < -5 ? "neg" : "ok"}">${signed(x)}%</td>`;
+      h += `<tr><td>${s.label.replace(/</g, "&lt;")}</td><td>${s.device}</td><td>${new Date(s.started).toLocaleString([], { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}</td>${c(S.by.short.errPct)}${c(S.by.mid.errPct)}${c(S.by.long.errPct)}<td>${fmt(S.by.long.corr, 1)}</td><td>${fmt(S.tp, 2)}</td><td><button data-i="${i}">View</button></td></tr>`;
+    });
+    $("sessions").innerHTML = h;
+    $("sessions").querySelectorAll("button[data-i]").forEach(b => b.onclick = () => showResult(loadSessions()[+b.dataset.i]));
+  }
+
+  // ---------- wiring ----------
+  $("start").onclick = startRun;
+  arena.addEventListener("pointermove", onMove);
+  arena.addEventListener("pointerdown", onDown);
+  arena.addEventListener("contextmenu", (e) => e.preventDefault());
+  addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && run) { run = null; arena.style.display = "none"; hud.style.display = "none"; $("home").style.display = "block"; }
+    if ((e.key === "Enter") && !run && document.activeElement !== $("start")) startRun();
+  });
+  addEventListener("resize", () => { if (run) { fitCanvas(); draw(); } });
+  $("export").onclick = () => {
+    const blob = new Blob([JSON.stringify(loadSessions(), null, 1)], { type: "application/json" });
+    const a = document.createElement("a"); a.href = URL.createObjectURL(blob);
+    a.download = `aimtest-${new Date().toISOString().slice(0, 10)}.json`; a.click();
+  };
+  $("clear").onclick = () => { if (confirm("Delete all saved runs?")) { saveSessions([]); renderSessions(); $("results").style.display = "none"; } };
+  try { $("label").value = localStorage.getItem("aimtest.label") || ""; } catch {}
+  $("label").addEventListener("change", () => { try { localStorage.setItem("aimtest.label", $("label").value); } catch {} });
+  renderSessions();
+})();
+</script>
+</body>
+</html>
