@@ -121,6 +121,11 @@
     </div>
   </section>
 
+  <div class="card" id="nosave" style="display:none;margin-top:16px;border-color:var(--target)">
+    <strong>Runs aren't being saved.</strong> This browser blocks storage for local files. Start the page with
+    <code>portless aimtest python3 tools/aimtest/serve.py</code> and open <code>https://aimtest.localhost</code>.
+  </div>
+
   <h2>Saved runs</h2>
   <div class="card tablewrap">
     <table id="sessions"></table>
@@ -149,8 +154,28 @@
   const fmt = (x, d = 0) => Number.isFinite(x) ? x.toFixed(d) : "–";
   const signed = (x, d = 0) => Number.isFinite(x) ? (x > 0 ? "+" : "") + x.toFixed(d) : "–";
 
-  function loadSessions() { try { return JSON.parse(localStorage.getItem(STORE)) || []; } catch { return []; } }
-  function saveSessions(s) { try { localStorage.setItem(STORE, JSON.stringify(s)); } catch (e) { console.warn("save failed", e); } }
+  // Runs live on disk when the page is served by serve.py (browsers such as
+  // Ardia refuse localStorage on file:// pages); otherwise in localStorage.
+  const SERVED = location.protocol.startsWith("http");
+  let cache = [], storageOk = true;
+  async function refreshSessions() {
+    if (SERVED) {
+      try { cache = await (await fetch("runs", { cache: "no-store" })).json(); } catch { storageOk = false; }
+    } else {
+      try { cache = JSON.parse(localStorage.getItem(STORE)) || []; } catch { storageOk = false; }
+    }
+    $("nosave").style.display = storageOk ? "none" : "block";
+    $("clear").style.display = SERVED ? "none" : "";
+  }
+  function loadSessions() { return cache; }
+  async function addSession(sess) {
+    cache.push(sess);
+    try {
+      if (SERVED) { const r = await fetch("runs", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(sess) }); if (!r.ok) throw new Error(r.status); }
+      else localStorage.setItem(STORE, JSON.stringify(cache));
+    } catch (e) { storageOk = false; $("nosave").style.display = "block"; console.warn("save failed", e); }
+  }
+  function saveSessions(s) { cache = s; try { localStorage.setItem(STORE, JSON.stringify(s)); } catch {} }
 
   // ---------- run state ----------
   let run = null;
@@ -369,10 +394,9 @@
     arena.style.display = "none"; hud.style.display = "none"; $("home").style.display = "block";
     const S = summarize(run.trials);
     const session = { label: run.label, device: run.device, started: run.started, screen: run.screen, summary: S, trials: run.trials };
-    const all = loadSessions(); all.push(session); saveSessions(all);
     run = null;
     showResult(session);
-    renderSessions();
+    addSession(session).then(renderSessions);
   }
 
   function showResult(sess) {
@@ -472,7 +496,7 @@
   $("clear").onclick = () => { if (confirm("Delete all saved runs?")) { saveSessions([]); renderSessions(); $("results").style.display = "none"; } };
   try { $("label").value = localStorage.getItem("aimtest.label") || ""; } catch {}
   $("label").addEventListener("change", () => { try { localStorage.setItem("aimtest.label", $("label").value); } catch {} });
-  renderSessions();
+  refreshSessions().then(renderSessions);
 })();
 </script>
 </body>
