@@ -259,9 +259,50 @@
   }
 
   function onMove(e) {
+    if (press) press.max = Math.max(press.max, Math.hypot(e.clientX - press.x, e.clientY - press.y));
     const c = run && run.cur; if (!c || c.warm) return;
     const evs = e.getCoalescedEvents ? e.getCoalescedEvents() : [e];
     for (const ev of (evs.length ? evs : [e])) c.path.push([ev.timeStamp - c.t0, ev.clientX, ev.clientY]);
+  }
+
+  // Every click is classified from the pointer's own movement around it:
+  //   nudge  - pointer sat still on the target, then moved off it in the
+  //            last 30 ms before the press registered (the click moved it)
+  //   moving - pointer still travelling when clicked (clicked too early or late)
+  //   off    - pointer stopped outside the target and was clicked there (aim)
+  // plus how far the pointer moved while the button was held.
+  let press = null;
+  function posAt(path, t) {
+    let p = path[0];
+    for (const q of path) { if (q[0] > t) break; p = q; }
+    return p;
+  }
+  function clickInfo(c, t, x, y, hit) {
+    // Pointer events only fire when it moves, so a gap of 60 ms or more
+    // between samples is a rest. Find the last burst of movement before the
+    // press: when it started (onset) and where the pointer rested before it.
+    const P = c.path.filter(q => q[0] <= t);
+    let j = P.length - 1;
+    while (j > 0 && P[j][0] - P[j - 1][0] < 60) j--;
+    const lastMove = P.length ? P[P.length - 1][0] : t;
+    const onset = P.length ? P[j][0] : t;
+    const restBefore = j > 0 ? onset - P[j - 1][0] : onset;
+    const restPos = j > 0 ? P[j - 1] : P[0];
+    const stillAtClick = t - lastMove >= 60;
+    const restOn = Math.hypot(restPos[1] - c.x, restPos[2] - c.y) <= c.r;
+    const late = stillAtClick ? 0 : Math.hypot(x - restPos[1], y - restPos[2]);
+    const edge = Math.hypot(x - c.x, y - c.y) - c.r; // px outside the edge (negative inside)
+    // nudge: resting on the target for 100+ ms, then moved off within 30 ms of the press
+    const nudged = !stillAtClick && t - onset <= 30 && restBefore >= 100;
+    let kind = "hit";
+    if (!hit) kind = nudged && restOn ? "nudge" : stillAtClick ? "off" : "moving";
+    return { t: Math.round(t), hit, kind, nudged, late: +late.toFixed(1), sinceOnset: Math.round(t - onset), edge: +edge.toFixed(1), press: 0 };
+  }
+
+  function onUp(e) {
+    if (!press || e.button !== 0) return;
+    press.rec.press = +Math.max(press.max, Math.hypot(e.clientX - press.x, e.clientY - press.y)).toFixed(1);
+    press = null;
   }
 
   function onDown(e) {
@@ -270,6 +311,9 @@
     const c = run.cur;
     const hit = Math.hypot(e.clientX - c.x, e.clientY - c.y) <= c.r;
     if (c.warm) { if (hit) nextTrial({ x: e.clientX, y: e.clientY }, e.timeStamp); return; }
+    const info = clickInfo(c, e.timeStamp - c.t0, e.clientX, e.clientY, hit);
+    (c.clicks = c.clicks || []).push(info);
+    press = { x: e.clientX, y: e.clientY, max: 0, rec: info };
     c.path.push([e.timeStamp - c.t0, e.clientX, e.clientY]);
     if (!hit) { c.misses++; return; }
     c.click = [e.timeStamp - c.t0, e.clientX, e.clientY];
@@ -339,7 +383,7 @@
       overshoot: +Math.max(0, maxAlong - c.D - c.r).toFixed(1), passed,
       corrections, entries, misses: c.misses,
       settle: firstIn === null ? null : Math.round(T - firstIn), mt: +mt.toFixed(3), rt: Math.round(rs[onset][0]),
-      tp: +(ID / mt).toFixed(2), shape,
+      tp: +(ID / mt).toFixed(2), shape, clicks: c.clicks || [],
     };
   }
 
@@ -387,7 +431,18 @@
       if (s.length) bands.push({ lo: s[0].peak, hi: s[s.length - 1].peak, mid: median(s.map(x => x.peak)), pastPct: median(s.map(x => x.pastPct)), n: s.length });
     }
     const tp = mean(trials.map(x => x.tp));
-    return { by, bands, tp, misses: all.reduce((s, x) => s + x.misses, 0), n: all.length, wrong: all.length - trials.length };
+    const clicks = all.flatMap(x => x.clicks || []);
+    const kinds = { nudge: 0, moving: 0, off: 0 };
+    for (const k of clicks) if (k.kind in kinds) kinds[k.kind]++;
+    const clickStats = clicks.length ? {
+      n: clicks.length, kinds,
+      offEdge: median(clicks.filter(k => k.kind === "off").map(k => k.edge)),
+      pressMoved: clicks.filter(k => k.press >= 2).length,
+      pressMax: Math.max(...clicks.map(k => k.press)),
+      hitsNudged: clicks.filter(k => k.hit && k.nudged && k.late >= 2).length,
+      hits: clicks.filter(k => k.hit).length,
+    } : null;
+    return { by, bands, tp, misses: all.reduce((s, x) => s + x.misses, 0), n: all.length, wrong: all.length - trials.length, clickStats };
   }
 
   // Trackball moves are often several thumb strokes, so the first stroke
@@ -413,6 +468,15 @@
     if (S.bands.length >= 3) {
       const slope = S.bands[S.bands.length - 1].pastPct - S.bands[0].pastPct;
       if (slope > 10) f.push({ w: slope / 3, t: `Overshoot grows with speed: fastest quarter of moves ${fmt(S.bands[S.bands.length - 1].pastPct)}% past, slowest ${fmt(S.bands[0].pastPct)}%.` });
+    }
+    const C = S.clickStats;
+    if (C) {
+      const miss = C.kinds.nudge + C.kinds.moving + C.kinds.off;
+      if (miss) f.push({ w: 0, t: `Misclicks: ${C.kinds.nudge} the click moved the pointer off the target, ${C.kinds.moving} clicked while still moving, ${C.kinds.off} stopped outside the target${Number.isFinite(C.offEdge) ? ` (typically ${fmt(C.offEdge, 1)} px off the edge)` : ""}.` });
+      if (C.hitsNudged) f.push({ w: 0, t: `Click nudge on hits: on ${C.hitsNudged} of ${C.hits} hits the pointer jumped 2 px or more as the button went down, but stayed on the target.` });
+      if (C.pressMoved) f.push({ w: 0, t: `Pointer moved 2 px or more while the button was held on ${C.pressMoved} of ${C.n} clicks (most ${fmt(C.pressMax)} px): risk of accidental drags.` });
+      if (miss >= 2 && C.kinds.nudge / miss >= 0.4) advice.push("Most misses are the click itself moving the pointer. That's the ball moving when the click key is pressed, not the speed curve.");
+      else if (miss >= 2 && C.kinds.off / miss >= 0.5) advice.push("Most misses stopped just outside the target: fine aim lands a few pixels off. Lower low-factor a little.");
     }
     f.sort((x, y) => y.w - x.w);
     const ok = !f.length && !advice.length;
@@ -514,6 +578,7 @@
   $("start").onclick = startRun;
   arena.addEventListener("pointermove", onMove);
   arena.addEventListener("pointerdown", onDown);
+  addEventListener("pointerup", onUp);
   arena.addEventListener("contextmenu", (e) => e.preventDefault());
   addEventListener("keydown", (e) => {
     if (e.key === "Escape" && run) { run = null; arena.style.display = "none"; hud.style.display = "none"; $("home").style.display = "block"; }
