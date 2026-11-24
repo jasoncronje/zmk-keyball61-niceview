@@ -148,10 +148,14 @@ nice_view_spi: &spi0 {
       // Tried on the purple ball: 0.7x-3.0x (walked), linear 2.0x (a touch
       // slow), linear 2.3x (small moves too sensitive), 1.4x-2.3x over
       // 400-1500 (felt static).
+      // 2026-11-24: speed-high 2500 -> 4000. Two tools/aimtest runs at 2500:
+      // short (240 px) and mid (720 px) moves overshot (mid 9% and 22% past
+      // the target, 4 of 7 by more than 10%), long moves only 3-6%. Quick
+      // short flicks reached the top gain too soon.
       low-factor = <1000>;
       high-factor = <3500>;
       speed-low = <500>;
-      speed-high = <2500>;
+      speed-high = <4000>;
       smoothing = <400>;
     };
 
