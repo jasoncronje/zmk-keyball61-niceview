@@ -463,7 +463,8 @@
       if ((over(s) || over(m)) && !over(l)) advice.push("Quick short and mid flicks overshoot but long moves don't: the top gain arrives too early. Raise speed-high (and maybe speed-low) so short flicks stay on the low part of the curve.");
       if (over(l) && !over(s)) advice.push("Long moves overshoot: lower high-factor.");
     }
-    if (!over(l) && l.pastPct < 3 && (l.strokes >= 3 || l.reach < 75)) advice.push(`Long moves fall short (first stroke reaches ${fmt(l.reach)}%, ${fmt(l.strokes, 1)} strokes) without overshooting: raise high-factor.`);
+    // relative to short moves: some people roll in several small strokes at every distance
+    if (!over(l) && l.pastPct < 3 && (l.strokes - s.strokes >= 1.5 || (l.reach < 75 && l.reach < s.reach - 15))) advice.push(`Long moves fall short (first stroke reaches ${fmt(l.reach)}%, ${fmt(l.strokes, 1)} strokes) without overshooting: raise high-factor.`);
     if (Number.isFinite(s.smallSettle) && s.smallSettle > 450 && s.entries > 1.6) advice.push(`Small targets take ${fmt(s.smallSettle)} ms to settle with repeated in-and-out: fine aim is twitchy. Lower low-factor.`);
     if (S.bands.length >= 3) {
       const slope = S.bands[S.bands.length - 1].pastPct - S.bands[0].pastPct;
